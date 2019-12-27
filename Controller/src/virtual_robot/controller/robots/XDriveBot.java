@@ -1,7 +1,8 @@
-package virtual_robot.controller.robots.classes;
+package virtual_robot.controller.robots;
 
 import com.qualcomm.robotcore.hardware.CRServoImpl;
 import javafx.fxml.FXML;
+import javafx.scene.Group;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -138,6 +139,10 @@ public class XDriveBot extends VirtualBot {
 
         crServo.updatePositionDegrees(millis);
 
+    }
+
+    protected Group getDisplayGroup(){
+        return null;
     }
 
     public synchronized void updateDisplay(){

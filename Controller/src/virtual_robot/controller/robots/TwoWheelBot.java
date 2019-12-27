@@ -1,7 +1,8 @@
-package virtual_robot.controller.robots.classes;
+package virtual_robot.controller.robots;
 
 import com.qualcomm.robotcore.hardware.*;
 import javafx.fxml.FXML;
+import javafx.scene.Group;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 import virtual_robot.controller.BotConfig;
@@ -93,6 +94,10 @@ public class TwoWheelBot extends VirtualBot {
             distanceSensors[i].updateDistance( x - halfBotWidth * Math.sin(sensorHeading),
                     y + halfBotWidth * Math.cos(sensorHeading), sensorHeading);
         }
+    }
+
+    protected Group getDisplayGroup(){
+        return null;
     }
 
     public synchronized void updateDisplay(){

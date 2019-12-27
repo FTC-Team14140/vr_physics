@@ -9,33 +9,36 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Group;
+import javafx.scene.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Box;
+import javafx.scene.shape.MeshView;
+import javafx.scene.shape.TriangleMesh;
+import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Translate;
 import javafx.util.Callback;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.reflections.Reflections;
+import util3d.Util3D;
 import virtual_robot.config.Config;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.geometry.Rectangle2D;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelReader;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.hardware.DcMotorImpl;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import virtual_robot.controller.robots.classes.MechanumBot;
-import virtual_robot.controller.robots.classes.TwoWheelBot;
+import virtual_robot.controller.robots.MechanumBot;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.net.URL;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -47,8 +50,8 @@ import java.util.concurrent.TimeUnit;
 public class VirtualRobotController {
 
     //User Interface
-    @FXML private StackPane fieldPane;
-    @FXML ImageView imgViewBackground;
+    @FXML private SubScene subScene;
+    @FXML private Group subSceneGroup;
     @FXML private ComboBox<Class<?>> cbxConfig;
     @FXML private Button driverButton;
     @FXML private ComboBox<Class<?>> cbxOpModes;
@@ -59,6 +62,7 @@ public class VirtualRobotController {
     @FXML private CheckBox checkBoxGamePad1;
     @FXML private CheckBox checkBoxGamePad2;
     @FXML private BorderPane borderPane;
+    @FXML private GridPane cameraGrid;
 
     //Virtual Hardware
     private HardwareMap hardwareMap = null;
@@ -73,8 +77,16 @@ public class VirtualRobotController {
     //Background Image and Field
     private Image backgroundImage = Config.BACKGROUND;
     private PixelReader pixelReader = backgroundImage.getPixelReader();
-    private double halfFieldWidth;
-    private double fieldWidth;
+
+    public static final double FIELD_WIDTH = 144;
+    public static final double HALF_FIELD_WIDTH = 72;
+
+    //Camera and Lighting
+    private final PerspectiveCamera camera = new PerspectiveCamera(true);
+    private final Rotate cameraElevationTransform = new Rotate(0, Rotate.X_AXIS);
+    private final Rotate cameraAzimuthTransform = new Rotate(0, Rotate.Z_AXIS);
+    private final double CAMERA_DISTANCE = 300.0;
+    private final Group lightGroup = new Group();
 
     //Lists of OpMode classes and OpMode Names
     private ObservableList<Class<?>> nonDisabledOpModeClasses = null;
@@ -111,22 +123,11 @@ public class VirtualRobotController {
     boolean getOpModeInitialized(){ return opModeInitialized; }
 
     public void initialize() {
+        setUp3DSubScene();
         OpMode.setVirtualRobotController(this);
         VirtualBot.setController(this);
         setupCbxOpModes();
         setupCbxRobotConfigs();
-        fieldWidth = Config.FIELD_WIDTH;
-        halfFieldWidth = fieldWidth / 2.0;
-        fieldPane.setPrefWidth(fieldWidth);
-        fieldPane.setPrefHeight(fieldWidth);
-        fieldPane.setMinWidth(fieldWidth);
-        fieldPane.setMaxWidth(fieldWidth);
-        fieldPane.setMinHeight(fieldWidth);
-        fieldPane.setMaxHeight(fieldWidth);
-        imgViewBackground.setFitWidth(fieldWidth);
-        imgViewBackground.setFitHeight(fieldWidth);
-        imgViewBackground.setViewport(new Rectangle2D(0, 0, fieldWidth, fieldWidth));
-        imgViewBackground.setImage(backgroundImage);
         sldRandomMotorError.valueProperty().addListener(sliderChangeListener);
         sldSystematicMotorError.valueProperty().addListener(sliderChangeListener);
         sldMotorInertia.valueProperty().addListener(sliderChangeListener);
@@ -155,7 +156,7 @@ public class VirtualRobotController {
 
     private void setupCbxRobotConfigs(){
         //Reflections reflections = new Reflections(VirtualRobotApplication.class.getClassLoader());
-        Reflections reflections = new Reflections("virtual_robot.controller.robots.classes");
+        Reflections reflections = new Reflections("virtual_robot.controller.robots");
         Set<Class<?>> configClasses = new HashSet<>();
         configClasses.addAll(reflections.getTypesAnnotatedWith(BotConfig.class));
         ObservableList<Class<?>> validConfigClasses = FXCollections.observableArrayList();
@@ -202,11 +203,8 @@ public class VirtualRobotController {
 
     public VirtualBot getVirtualBotInstance(Class<?> c){
         try {
-            Annotation a = c.getAnnotation(BotConfig.class);
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/virtual_robot/controller/robots/fxml/" + ((BotConfig) a).filename() + ".fxml"));
-            Group group = (Group) loader.load();
-            VirtualBot bot = (VirtualBot) loader.getController();
-            bot.setUpDisplayGroup(group);
+            VirtualBot bot = (VirtualBot)c.newInstance();
+            bot.setUpDisplayGroup();
             return bot;
         } catch (Exception e){
             System.out.println("Unable to load robot configuration.");
@@ -305,7 +303,7 @@ public class VirtualRobotController {
     @FXML
     public void setConfig(ActionEvent event){
         if (opModeInitialized || opModeStarted) return;
-        if (bot != null) bot.removeFromDisplay(fieldPane);
+        if (bot != null) bot.removeFromDisplay();
         bot = getVirtualBotInstance(cbxConfig.getValue());
         if (bot == null) System.out.println("Unable to get VirtualBot Object");
         hardwareMap = bot.getHardwareMap();
@@ -315,7 +313,7 @@ public class VirtualRobotController {
         sldMotorInertia.setValue(0.0);
     }
 
-    public StackPane getFieldPane(){ return fieldPane; }
+    public Group getSubSceneGroup(){ return subSceneGroup; }
 
     @FXML
     private void handleDriverButtonAction(ActionEvent event){
@@ -519,8 +517,8 @@ public class VirtualRobotController {
         public synchronized int blue(){ return blue; }
 
         public synchronized void updateColor(double x, double y){
-            int colorX = (int)(x + halfFieldWidth);
-            int colorY = (int)(halfFieldWidth - y);
+            int colorX = (int)(x + HALF_FIELD_WIDTH);
+            int colorY = (int)(HALF_FIELD_WIDTH - y);
             double tempRed = 0.0;
             double tempGreen = 0.0;
             double tempBlue = 0.0;
@@ -569,7 +567,7 @@ public class VirtualRobotController {
         }
 
         public synchronized void updateDistance(double x, double y, double headingRadians){
-            final double mmPerPixel = 144.0 * 25.4 / fieldWidth;
+            final double mmPerPixel = 144.0 * 25.4 / FIELD_WIDTH;
             final double piOver2 = Math.PI / 2.0;
             double temp = headingRadians / piOver2;
             int side = (int)Math.round(temp); //-2, -1 ,0, 1, or 2 (2 and -2 both refer to the right side)
@@ -578,16 +576,16 @@ public class VirtualRobotController {
             else switch (side){
                 case 2:
                 case -2:
-                    distanceMM = (y + halfFieldWidth) * mmPerPixel;
+                    distanceMM = (y + HALF_FIELD_WIDTH) * mmPerPixel;
                     break;
                 case -1:
-                    distanceMM = (halfFieldWidth - x) * mmPerPixel;
+                    distanceMM = (HALF_FIELD_WIDTH - x) * mmPerPixel;
                     break;
                 case 0:
-                    distanceMM = (halfFieldWidth - y) * mmPerPixel;
+                    distanceMM = (HALF_FIELD_WIDTH - y) * mmPerPixel;
                     break;
                 case 1:
-                    distanceMM = (x + halfFieldWidth) * mmPerPixel;
+                    distanceMM = (x + HALF_FIELD_WIDTH) * mmPerPixel;
                     break;
             }
         }
@@ -753,6 +751,83 @@ public class VirtualRobotController {
         public void quit(){
             controller.quitSDLGamepad();
         }
+
+    }
+
+    public void handleCameraButtonAction(ActionEvent event){
+        int row = GridPane.getRowIndex((Button)event.getSource());
+        int col = GridPane.getColumnIndex((Button)event.getSource());
+        if (row == 1 && col == 1){
+            cameraElevationTransform.setAngle(0);
+            cameraAzimuthTransform.setAngle(0);
+            camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI);
+        } else {
+            cameraElevationTransform.setAngle(60);
+            cameraAzimuthTransform.setAngle( Math.atan2(col-1, row-1) * 180.0/Math.PI);
+            if (row==1 || col==1) {
+                camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI * 1.3);
+            } else {
+                camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI * 1.5);
+            }
+        }
+
+    }
+
+    public void setUp3DSubScene(){
+
+        camera.getTransforms().addAll(
+                cameraAzimuthTransform,
+                cameraElevationTransform,
+                new Rotate(180, Rotate.X_AXIS),
+                new Translate(0, 0, -CAMERA_DISTANCE)
+        );
+
+        cameraElevationTransform.setAngle(0);
+        cameraAzimuthTransform.setAngle(0);
+
+        camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI);
+        camera.setFarClip(1000);
+        camera.setNearClip(10);
+
+        for (int i=0; i<12; i++){
+            PointLight light = new PointLight(Color.WHITE);
+            light.getTransforms().addAll(
+                    new Rotate(i * 30.0, Rotate.Z_AXIS),
+                    new Rotate(60, Rotate.X_AXIS),
+                    new Translate(0, 0, CAMERA_DISTANCE)
+            );
+            lightGroup.getChildren().add(light);
+        }
+
+        TriangleMesh fieldMesh = Util3D.getParametricMesh(-HALF_FIELD_WIDTH, HALF_FIELD_WIDTH,-HALF_FIELD_WIDTH, HALF_FIELD_WIDTH,
+                10, 10, false, false, new Util3D.Param3DEqn() {
+                    @Override
+                    public float x(float s, float t) {
+                        return s;
+                    }
+
+                    @Override
+                    public float y(float s, float t) {
+                        return t;
+                    }
+
+                    @Override
+                    public float z(float s, float t) {
+                        return 0;
+                    }
+                });
+        MeshView fieldView = new MeshView(fieldMesh);
+        PhongMaterial fieldMaterial = new PhongMaterial();
+        fieldMaterial.setDiffuseColor(Color.gray(0.02));
+        fieldMaterial.setDiffuseMap(Config.BACKGROUND);
+        fieldMaterial.setSelfIlluminationMap(Config.BACKGROUND);
+        fieldView.setMaterial(fieldMaterial);
+
+        Box testBox = new Box(50, 50, 1);
+        testBox.setMaterial(new PhongMaterial(Color.RED));
+
+        subSceneGroup.getChildren().addAll(camera, lightGroup, fieldView);
+        subScene.setCamera(camera);
 
     }
 

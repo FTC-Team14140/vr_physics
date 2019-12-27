@@ -9,6 +9,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Box;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
@@ -44,7 +46,7 @@ public abstract class VirtualBot {
 
     protected Group displayGroup = null;
 
-    protected StackPane fieldPane;
+    protected Group subSceneGroup;
     protected double fieldWidth;
     protected double halfFieldWidth;
     protected double halfBotWidth;
@@ -55,9 +57,9 @@ public abstract class VirtualBot {
     protected double headingRadians = 0;
 
     public VirtualBot(){
-        fieldPane = controller.getFieldPane();
+        subSceneGroup = controller.getSubSceneGroup();
         createHardwareMap();
-        this.fieldWidth = fieldPane.getPrefWidth();
+        this.fieldWidth = VirtualRobotController.FIELD_WIDTH;
         halfFieldWidth = fieldWidth / 2.0;
         botWidth = fieldWidth / 8.0;
         halfBotWidth = botWidth / 2.0;
@@ -68,37 +70,33 @@ public abstract class VirtualBot {
     }
 
     /**
+     * Get the display group from the concrete robot class
+     */
+    protected abstract Group getDisplayGroup();
+
+    /**
      * Set up the Group object that will be displayed as the virtual robot. The resource file should contain
      * a Group with a 75x75 rectangle (The chassis rectangle) as its lowest layer, and other robot components
      * on top of that rectangle.
      *
      */
-    protected void setUpDisplayGroup(Group group){
+    protected void setUpDisplayGroup(){
 
-        displayGroup = group;
+        displayGroup = getDisplayGroup();
 
         /*
-           Create a transparent 600x600 rectangle to serve as the base layer of the robot. It will go
-           below the 75x75 chassis rectangle.
+           Create a transparent 144x144 Box to serve as the base layer of the robot. It will go
+           around the robot itself.
         */
 
-        Rectangle baseRect = new Rectangle(0, 0, 600, 600);
-        baseRect.setFill(new Color(1.0, 0.0, 1.0, 0.0));
-        baseRect.setVisible(true);
+        Box baseBox = new Box(144, 144, 144);
+        baseBox.setMaterial(new PhongMaterial(Color.TRANSPARENT));
 
-        /*
-          Translate the display group by (300 - 37.5) in X and Y, so that the
-          center of the chassis rectangle will be at the same location as the center of the 600x600 base
-          rectangle.
-         */
-
-        displayGroup.setTranslateX(displayGroup.getTranslateX() + 300 - 37.5);
-        displayGroup.setTranslateY(displayGroup.getTranslateY() + 300 - 37.5);
 
         //Create a new display group with the 600x600 transparent rectangle as its base layer, and
         //the original display group as its upper layer.
 
-        displayGroup = new Group(baseRect, displayGroup);
+        displayGroup = new Group(baseBox, displayGroup);
 
         /*
           Add transforms. They will be applied in the opposite order from the order in which they are added.
@@ -108,10 +106,9 @@ public abstract class VirtualBot {
           around the field.
          */
         displayGroup.getTransforms().add(new Translate(0, 0));
-        displayGroup.getTransforms().add(new Rotate(0, halfFieldWidth, halfFieldWidth));
-        displayGroup.getTransforms().add(new Scale(botWidth/75.0, botWidth/75.0, 0, 0));
+        displayGroup.getTransforms().add(new Rotate(0, 0, 0));
 
-        fieldPane.getChildren().add(displayGroup);
+        subSceneGroup.getChildren().add(displayGroup);
     }
 
     /**
@@ -142,8 +139,9 @@ public abstract class VirtualBot {
      */
     public synchronized void updateDisplay(){
         double displayX = x;
-        double displayY = -y;
-        double displayAngle = -headingRadians * 180.0 / Math.PI;
+        double displayY = y;
+        double displayAngle = headingRadians * 180.0 / Math.PI;
+        System.out.println("x = " + x + "  y = " + y + "  heading = " + headingRadians*180.0/Math.PI);
         Translate translate = (Translate)displayGroup.getTransforms().get(0);
         translate.setX(displayX);
         translate.setY(displayY);
@@ -175,8 +173,8 @@ public abstract class VirtualBot {
         }
     }
 
-    public void removeFromDisplay(StackPane fieldPane){
-        fieldPane.getChildren().remove(displayGroup);
+    public void removeFromDisplay(){
+        subSceneGroup.getChildren().remove(displayGroup);
     }
 
     public HardwareMap getHardwareMap(){ return hardwareMap; }

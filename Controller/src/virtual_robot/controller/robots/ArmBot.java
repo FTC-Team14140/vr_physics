@@ -1,4 +1,4 @@
-package virtual_robot.controller.robots.classes;
+package virtual_robot.controller.robots;
 
 import com.qualcomm.hardware.bosch.BNO055IMUImpl;
 import com.qualcomm.robotcore.hardware.DcMotorImpl;
@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.MotorType;
 import com.qualcomm.robotcore.hardware.ServoImpl;
 import javafx.fxml.FXML;
+import javafx.scene.Group;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
@@ -306,6 +307,10 @@ public class ArmBot extends VirtualBot {
         double armTicks = armMotor.update(millis);
         double newArmScale = armScale + armTicks / 1120.;
         if (newArmScale >= 1.0 && newArmScale <= 4) armScale = newArmScale;
+    }
+
+    protected Group getDisplayGroup(){
+        return null;
     }
 
     /**

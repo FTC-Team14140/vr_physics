@@ -1,7 +1,13 @@
-package virtual_robot.controller.robots.classes;
+package virtual_robot.controller.robots;
 
 import com.qualcomm.robotcore.hardware.ServoImpl;
 import javafx.fxml.FXML;
+import javafx.geometry.Point3D;
+import javafx.scene.Group;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Box;
+import javafx.scene.shape.Cylinder;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -30,9 +36,6 @@ public class MechanumBot extends VirtualBot {
     private VirtualRobotController.ColorSensorImpl colorSensor = null;
     private ServoImpl servo = null;
     private VirtualRobotController.DistanceSensorImpl[] distanceSensors = null;
-
-    // backServoArm is instantiated during loading via a fx:id property.
-    @FXML Rectangle backServoArm;
 
     private double wheelCircumference;
     private double interWheelWidth;
@@ -71,11 +74,6 @@ public class MechanumBot extends VirtualBot {
                 {-0.25/ wlAverage, -0.25/ wlAverage, 0.25/ wlAverage, 0.25/ wlAverage},
                 {-0.25, 0.25, 0.25, -0.25}
         };
-    }
-
-    public void initialize(){
-        //backServoArm = (Rectangle)displayGroup.getChildren().get(8);
-        backServoArm.getTransforms().add(new Rotate(0, 37.5, 67.5));
     }
 
     protected void createHardwareMap(){
@@ -143,10 +141,27 @@ public class MechanumBot extends VirtualBot {
 
     }
 
-    public synchronized void updateDisplay(){
-        super.updateDisplay();
-        ((Rotate)backServoArm.getTransforms().get(0)).setAngle(-180.0 * servo.getInternalPosition());
+    protected Group getDisplayGroup(){
+        Box chassis = new Box(14, 18, 1);
+        chassis.setMaterial(new PhongMaterial(Color.YELLOW));
+        Cylinder[] wheels = new Cylinder[4];
+        PhongMaterial wheelMaterial = new PhongMaterial(Color.BLUE);
+        wheelMaterial.setSpecularColor(Color.WHITE);
+        for (int i=0; i<4; i++){
+            wheels[i] = new Cylinder(2, 2);
+            wheels[i].setRotationAxis(new Point3D(0, 0, 1));
+            wheels[i].setRotate(90);
+            wheels[i].setTranslateX(i<2? -8 : 8);
+            wheels[i].setTranslateY(i%2==0? -7 : 7);
+            wheels[i].setMaterial(wheelMaterial);
+        }
+        Group group = new Group();
+        group.getChildren().add(chassis);
+        group.getChildren().addAll(wheels);
+        group.setTranslateZ(2);
+        return group;
     }
+
 
     public void powerDownAndReset(){
         for (int i=0; i<4; i++) motors[i].stopAndReset();
