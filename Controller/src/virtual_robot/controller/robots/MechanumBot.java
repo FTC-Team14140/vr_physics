@@ -14,6 +14,8 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.hardware.bosch.BNO055IMUImpl;
 import com.qualcomm.robotcore.hardware.DcMotorImpl;
 import com.qualcomm.robotcore.hardware.MotorType;
+import javafx.scene.transform.Translate;
+import util3d.Util3D;
 import virtual_robot.controller.BotConfig;
 import virtual_robot.controller.VirtualBot;
 import virtual_robot.controller.VirtualRobotController;
@@ -26,15 +28,16 @@ import virtual_robot.util.AngleUtils;
  * MechanumBot is the controller class for the "mechanum_bot.fxml" markup file.
  *
  */
-@BotConfig(name = "Mechanum Bot", filename = "mechanum_bot")
+@BotConfig(name = "Mechanum Bot")
 public class MechanumBot extends VirtualBot {
 
     MotorType motorType;
     private DcMotorImpl[] motors = null;
-    //private VirtualRobotController.GyroSensorImpl gyro = null;
+    private DcMotorImpl armExtensionMotor = null;
+    private DcMotorImpl armRotationMotor = null;
     private BNO055IMUImpl imu = null;
     private VirtualRobotController.ColorSensorImpl colorSensor = null;
-    private ServoImpl servo = null;
+    private ServoImpl fingerServo = null;
     private VirtualRobotController.DistanceSensorImpl[] distanceSensors = null;
 
     private double wheelCircumference;
@@ -43,6 +46,15 @@ public class MechanumBot extends VirtualBot {
     private double wlAverage;
 
     private double[][] tWR; //Transform from wheel motion to robot motion
+
+    Rotate armRotate = new Rotate(0, 0, -5.5, 0, new Point3D(1, 0, 0));
+    Translate midArmTranslate = new Translate(0, 0, 0);
+    Translate foreArmTranslate = new Translate(0, 0, 0);
+    Translate leftFingerTranslate = new Translate(0, 0, 0);
+    Translate rightFingerTranslate = new Translate(0, 0, 0);
+
+    double armRotation = 0;
+    double armExtension = 0;
 
 
     public MechanumBot(){
@@ -53,6 +65,10 @@ public class MechanumBot extends VirtualBot {
                 (DcMotorImpl)hardwareMap.dcMotor.get("front_right_motor"),
                 (DcMotorImpl)hardwareMap.dcMotor.get("back_right_motor")
         };
+
+        armExtensionMotor = (DcMotorImpl)hardwareMap.dcMotor.get("arm_extension_motor");
+        armRotationMotor = (DcMotorImpl)hardwareMap.dcMotor.get("arm_rotation_motor");
+
         distanceSensors = new VirtualRobotController.DistanceSensorImpl[]{
                 hardwareMap.get(VirtualRobotController.DistanceSensorImpl.class, "front_distance"),
                 hardwareMap.get(VirtualRobotController.DistanceSensorImpl.class, "left_distance"),
@@ -62,7 +78,7 @@ public class MechanumBot extends VirtualBot {
         //gyro = (VirtualRobotController.GyroSensorImpl)hardwareMap.gyroSensor.get("gyro_sensor");
         imu = hardwareMap.get(BNO055IMUImpl.class, "imu");
         colorSensor = (VirtualRobotController.ColorSensorImpl)hardwareMap.colorSensor.get("color_sensor");
-        servo = (ServoImpl)hardwareMap.servo.get("back_servo");
+        fingerServo = (ServoImpl)hardwareMap.servo.get("finger_servo");
         wheelCircumference = Math.PI * botWidth / 4.5;
         interWheelWidth = botWidth * 8.0 / 9.0;
         interWheelLength = botWidth * 7.0 / 9.0;
@@ -79,14 +95,15 @@ public class MechanumBot extends VirtualBot {
     protected void createHardwareMap(){
         motorType = MotorType.Neverest40;
         hardwareMap = new HardwareMap();
-        String[] motorNames = new String[] {"back_left_motor", "front_left_motor", "front_right_motor", "back_right_motor"};
+        String[] motorNames = new String[] {"back_left_motor", "front_left_motor", "front_right_motor", "back_right_motor",
+                "arm_rotation_motor", "arm_extension_motor"};
         for (String name: motorNames) hardwareMap.put(name, new DcMotorImpl(motorType));
         String[] distNames = new String[]{"front_distance", "left_distance", "back_distance", "right_distance"};
         for (String name: distNames) hardwareMap.put(name, controller.new DistanceSensorImpl());
         //hardwareMap.put("gyro_sensor", controller.new GyroSensorImpl());
         hardwareMap.put("imu", new BNO055IMUImpl(this, 175));
         hardwareMap.put("color_sensor", controller.new ColorSensorImpl());
-        hardwareMap.put("back_servo", new ServoImpl());
+        hardwareMap.put("finger_servo", new ServoImpl());
     }
 
     public synchronized void updateStateAndSensors(double millis){
@@ -139,27 +156,80 @@ public class MechanumBot extends VirtualBot {
                     y + halfBotWidth * Math.cos(sensorHeading), sensorHeading);
         }
 
+        double newArmRotation = armRotation + 0.05 * armRotationMotor.update(millis);
+        armRotation = Math.max(0, Math.min(90, newArmRotation));
+        double newArmExtension = armExtension + 0.01 * armExtensionMotor.update(millis);
+        armExtension = Math.max(0, Math.min(22, newArmExtension));
+
     }
 
     protected Group getDisplayGroup(){
-        Box chassis = new Box(14, 18, 1);
-        chassis.setMaterial(new PhongMaterial(Color.YELLOW));
+        Box chassis = new Box(14, 18, 2);
+        PhongMaterial chassisMaterial = new PhongMaterial(Color.YELLOW);
+        chassisMaterial.setSpecularColor(Color.WHITE);
+        chassis.setMaterial(chassisMaterial);
         Cylinder[] wheels = new Cylinder[4];
         PhongMaterial wheelMaterial = new PhongMaterial(Color.BLUE);
         wheelMaterial.setSpecularColor(Color.WHITE);
         for (int i=0; i<4; i++){
-            wheels[i] = new Cylinder(2, 2);
+            wheels[i] = new Cylinder(2,2);
+            wheels[i].setMaterial(wheelMaterial);
             wheels[i].setRotationAxis(new Point3D(0, 0, 1));
             wheels[i].setRotate(90);
             wheels[i].setTranslateX(i<2? -8 : 8);
             wheels[i].setTranslateY(i%2==0? -7 : 7);
-            wheels[i].setMaterial(wheelMaterial);
         }
-        Group group = new Group();
-        group.getChildren().add(chassis);
-        group.getChildren().addAll(wheels);
-        group.setTranslateZ(2);
-        return group;
+
+        PhongMaterial armMaterial = new PhongMaterial(Color.FUCHSIA);
+        armMaterial.setSpecularColor(Color.WHITE);
+        Box arm = new Box(1, 12, 1);
+        arm.setMaterial(armMaterial);
+        Box midArm = new Box(1, 12, 1);
+        midArm.setMaterial(armMaterial);
+        Box foreArm = new Box(1, 12, 1);
+        foreArm.setMaterial(armMaterial);
+        Box hand = new Box(6, 1, 1);
+        hand.setTranslateY(6);
+        hand.setMaterial(armMaterial);
+        Box  leftFinger = new Box(1, 4, 1);
+        leftFinger.setTranslateY(8);
+        leftFinger.setTranslateX(-2.5);
+        leftFinger.setMaterial(armMaterial);
+        Box  rightFinger = new Box(1, 4, 1);
+        rightFinger.setTranslateY(8);
+        rightFinger.setTranslateX(2.5);
+        rightFinger.setMaterial(armMaterial);
+        leftFinger.getTransforms().add(leftFingerTranslate);
+        rightFinger.getTransforms().add(rightFingerTranslate);
+        Group foreArmGroup = new Group(foreArm, hand, leftFinger, rightFinger);
+        foreArmGroup.setTranslateZ(1);
+        foreArmGroup.getTransforms().add(foreArmTranslate);
+        Group midArmGroup = new Group(midArm, foreArmGroup);
+        midArmGroup.setTranslateZ(1);
+        midArmGroup.getTransforms().add(midArmTranslate);
+        Group armGroup = new Group(arm, midArmGroup);
+        armGroup.setTranslateZ(1.5);
+        armGroup.setTranslateY(-3);
+        armGroup.getTransforms().add(armRotate);
+
+
+        Group botGroup = new Group();
+        botGroup.getChildren().add(chassis);
+        botGroup.getChildren().addAll(wheels);
+        botGroup.getChildren().add(armGroup);
+        botGroup.setTranslateZ(2);
+        return botGroup;
+    }
+
+    @Override
+    public synchronized void updateDisplay(){
+        super.updateDisplay();
+        armRotate.setAngle(armRotation);
+        midArmTranslate.setY(armExtension/2.0);
+        foreArmTranslate.setY(armExtension/2.0);
+        double fingerMovement = fingerServo.getInternalPosition();
+        leftFingerTranslate.setX(fingerMovement);
+        rightFingerTranslate.setX(-fingerMovement);
     }
 
 

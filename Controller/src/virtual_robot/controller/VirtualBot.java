@@ -17,6 +17,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import virtual_robot.config.Config;
 
 /**
  *   For internal use only. Abstract base class for all of the specific robot configurations.
@@ -89,14 +90,14 @@ public abstract class VirtualBot {
            around the robot itself.
         */
 
-        Box baseBox = new Box(144, 144, 144);
-        baseBox.setMaterial(new PhongMaterial(Color.TRANSPARENT));
+//        Box baseBox = new Box(144, 144, 144);
+//        baseBox.setMaterial(new PhongMaterial(Color.TRANSPARENT));
 
 
         //Create a new display group with the 600x600 transparent rectangle as its base layer, and
         //the original display group as its upper layer.
 
-        displayGroup = new Group(baseBox, displayGroup);
+//        displayGroup = new Group(baseBox, displayGroup);
 
         /*
           Add transforms. They will be applied in the opposite order from the order in which they are added.
@@ -141,7 +142,6 @@ public abstract class VirtualBot {
         double displayX = x;
         double displayY = y;
         double displayAngle = headingRadians * 180.0 / Math.PI;
-        System.out.println("x = " + x + "  y = " + y + "  heading = " + headingRadians*180.0/Math.PI);
         Translate translate = (Translate)displayGroup.getTransforms().get(0);
         translate.setX(displayX);
         translate.setY(displayY);
@@ -156,19 +156,24 @@ public abstract class VirtualBot {
     public double getHeadingRadians(){ return headingRadians; }
 
     public void positionWithMouseClick(MouseEvent arg){
-
         if (arg.getButton() == MouseButton.PRIMARY) {
-            double argX = Math.max(halfBotWidth, Math.min(fieldWidth - halfBotWidth, arg.getX()));
-            double argY = Math.max(halfBotWidth, Math.min(fieldWidth - halfBotWidth, arg.getY()));
-            x = argX - halfFieldWidth;
-            y = halfFieldWidth - argY;
+            double argX = Math.min(halfFieldWidth-halfBotWidth,
+                    Math.max((arg.getX()- Config.SUBSCENE_WIDTH/2.0)*fieldWidth/Config.SUBSCENE_WIDTH, -(halfFieldWidth-halfBotWidth)));
+            double argY = Math.min(halfFieldWidth-halfBotWidth,
+                    Math.max(-(arg.getY()- Config.SUBSCENE_WIDTH/2.0)*fieldWidth/Config.SUBSCENE_WIDTH, -(halfFieldWidth-halfBotWidth)));
+            x = argX;
+            y = argY;
+            System.out.println("getX = " + arg.getX() + "  getY = " + arg.getY() + "  x = " + x + "  y = " + y);
             updateDisplay();
         }
         else if (arg.getButton() == MouseButton.SECONDARY){
-            double centerX = x + halfFieldWidth;
-            double centerY = halfFieldWidth - y;
-            double displayAngleRads = Math.atan2(arg.getX() - centerX, centerY - arg.getY());
-            headingRadians = -displayAngleRads;
+            double clickX = (arg.getX() - Config.SUBSCENE_WIDTH/2.0) * fieldWidth/Config.SUBSCENE_WIDTH;
+            double clickY = (Config.SUBSCENE_WIDTH/2.0 - arg.getY()) * fieldWidth/Config.SUBSCENE_WIDTH;
+            double radians = Math.atan2(clickY - y, clickX - x) - Math.PI/2.0;
+            if (radians > Math.PI) radians -= 2.0*Math.PI;
+            else if (radians < -Math.PI) radians += 2.0 * Math.PI;
+            headingRadians = radians;
+            System.out.println("clickX = " + clickX + "  clickY = " + clickY);
             updateDisplay();
         }
     }

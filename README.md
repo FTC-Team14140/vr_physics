@@ -1,29 +1,31 @@
-A 2D simulator to help beginning Java programmers learn to program for FTC Robotics.
+# NEW:  3D Version of Virtual Robot
+
+**NOTE:  NOT ALL HARDWARE WILL SUPPORT JAVA-FX 3D SCENES.**  This runs on a 2016 Dell XPS 8900 Windows 10 desktop,
+but does not run on a 2008 Lenovo Thinkpad T64 (originally Vista, now Windows 10).
+
+A 3D simulator to help beginning Java programmers learn to program for FTC Robotics.
 
 This is a JavaFX application developed using the (free) IntelliJ IDEA Community Edition IDE. The repository can be downloaded
 and unzipped, then opened with IntelliJ.
 
-Four robot configurations are available: a simple two-wheeled robot, a robot with four mecanum wheels, an
-X-Drive robot with four OmniWheels mounted at 45 degrees at each corner of the robot, and an additional
-mecanum-wheeled configuration that has an extendable arm with a grabber at the end.
+Three robot configurations are available: a simple two-wheeled robot, a robot with four mechanum wheels, and an
+X-Drive robot with four OmniWheels mounted at 45 degrees at each corner of the robot.
 
 Each robot can be thought of as 18 inches wide.  For the two-wheel bot and mecanum wheel bot, the distance between
 the centers of the right and left wheels is 16 inches. For the mecanum wheel bot, the distance between the centers
 of the front and back wheels is 14 inches, and the mecanum wheels (when viewed from the top) have an "X" configuration.
 For the X-Drive bot, the distance between the centers of any two adjacent wheels is 14.5 inches. Each motor has an
 encoder. There is a downward-facing color sensor in the center of the robot. A gyro sensor (or BNO055 imu) is also included.
-The ArmBot has an extendable arm (DcMotor operated) with a grabber (Servo-operated) at the end. The other robots
-have a simple rotating arm at the back. For the Mechanum bot and Two-Wheeled bot, the arm is controlled by a servo.
-For the X-Drive bot, the arm is controlled by a CR servo. Each robot also has distance sensors on the front, left, right
+Each robot has an rotating/extending arm attached to the back, controlled by DC motors. There is a grabber at the
+end of the arm that is controlled by a servo. Each robot also has distance sensors on the front, left, right
 and back sides. A small green rectangle indicates the front of the robot. Wheel diameters are all 4 inches.
 
 The field can be thought of as 12 feet wide. The field graphic (currently the Skystone field)
 is obtained from a bitmap (.bmp) image. The color sensor detects the field color beneath the center of the
 robot. The field graphic is easily changed by providing a different .bmp image in the virtual_robot.config.Config class.
-The .bmp image is the skysone_field648.bmp file in the virtual_robot.assets folder. If a different .bmp image is used,
-it must be at least as wide and as tall as the field dimensions (currently 648 x 648 pixels to fit on the screen of
-most laptops). The Config class also allows selection between the use of "real" hardware gamepads versus a
-"virtual gamepad".
+The .bmp image is the skysone_field648.bmp file in the virtual_robot.assets folder. As is, the 3D display scene is
+800x800 pixels. This can be increased or decreased by changing the value of SUBSCENE_WIDTH in the
+virtual_robot.config.Config.java class.
 
 An abridged approximation of the FTC SDK is provided.
 
@@ -36,8 +38,6 @@ The OpMode (and therefore LinearOpMode) class in the simulator provides access t
      the servo, and the color sensor;
   2. Two GamePads(actual hardware gamepads, though there is an option to use a "virtual gamepad -- see Log of Changes below");
   3. A Telemetry object.
-
-An approximation of the FTC SDK's ElapsedTime class is provided in the time package.
 
 Several example OpModes are provided in the org.firstinspires.ftc.teamcode package.
 
@@ -59,12 +59,17 @@ To use:
   7. Use Configuration dropdown box to select a robot configuration. The configuration will be displayed.
   8. Use the Op Mode drop down box to select the desired OpMode.
   9. Prior to initialization, position the robot on the field by left-mouse-clicking the field (for robot position),
-     and right-mouse-clicking (for robot orientation).
+     and right-mouse-clicking (for robot orientation). This must be done with 3D camera in overhead view.
   10. Use the INIT/START/STOP button as you would on the FTC Driver Station.
-  11. If desired use the sliders to introduce random and systematic motor error, and inertia.
+  11. Use the Camera buttons on the left to change the position of the 3D camera.
+  12. If desired use the sliders to introduce random and systematic motor error, and inertia.
 
 
 LOG OF CHANGES
+
+CHANGES 12/31/2019
+    Modified the original Virtual Robot application to use JavaFX 3D graphics. It is possible to create new robot
+    configurations, but for the 3D version this is done completely in Java code.
 
 CHANGES 12/16/2019
     Further changes to facilitate creation of new robot configurations. The robot configuration classes (e.g., 

@@ -8,9 +8,9 @@ import javafx.scene.image.Image;
 public class Config {
 
     /**
-     *  Width of the field, in pixels
+     *  Width of the subscene, in pixels
      */
-    public static final double FIELD_WIDTH = 648;
+    public static final double SUBSCENE_WIDTH = 800;
 
     /**
      * Whether to use "Virtual Gamepad" (true -> Virtual gamepad, false -> Real gamepad)

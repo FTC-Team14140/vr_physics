@@ -12,6 +12,7 @@ public class MecanumDrivingOpMode extends OpMode {
     // Code to run ONCE when the driver hits INIT
     @Override
     public void init() {
+        gamepad1.setJoystickDeadzone(0.05f);
         mecanumDrive.init(hardwareMap);
     }
 

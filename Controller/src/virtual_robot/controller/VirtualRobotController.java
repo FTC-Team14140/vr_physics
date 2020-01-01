@@ -8,15 +8,18 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.*;
 import javafx.scene.control.*;
+import javafx.scene.effect.Light;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import javafx.scene.shape.MeshView;
+import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
@@ -50,8 +53,6 @@ import java.util.concurrent.TimeUnit;
 public class VirtualRobotController {
 
     //User Interface
-    @FXML private SubScene subScene;
-    @FXML private Group subSceneGroup;
     @FXML private ComboBox<Class<?>> cbxConfig;
     @FXML private Button driverButton;
     @FXML private ComboBox<Class<?>> cbxOpModes;
@@ -63,6 +64,9 @@ public class VirtualRobotController {
     @FXML private CheckBox checkBoxGamePad2;
     @FXML private BorderPane borderPane;
     @FXML private GridPane cameraGrid;
+
+    private SubScene subScene;
+    private Group subSceneGroup;
 
     //Virtual Hardware
     private HardwareMap hardwareMap = null;
@@ -86,7 +90,9 @@ public class VirtualRobotController {
     private final Rotate cameraElevationTransform = new Rotate(0, Rotate.X_AXIS);
     private final Rotate cameraAzimuthTransform = new Rotate(0, Rotate.Z_AXIS);
     private final double CAMERA_DISTANCE = 300.0;
-    private final Group lightGroup = new Group();
+    private final Rotate lightElevationTransform = new Rotate(0, Rotate.Z_AXIS);
+    private final Rotate lightAzimuthTransform = new Rotate(0, Rotate.X_AXIS);
+    private boolean topView = true;
 
     //Lists of OpMode classes and OpMode Names
     private ObservableList<Class<?>> nonDisabledOpModeClasses = null;
@@ -128,6 +134,7 @@ public class VirtualRobotController {
         VirtualBot.setController(this);
         setupCbxOpModes();
         setupCbxRobotConfigs();
+        setConfig(null);
         sldRandomMotorError.valueProperty().addListener(sliderChangeListener);
         sldSystematicMotorError.valueProperty().addListener(sliderChangeListener);
         sldMotorInertia.valueProperty().addListener(sliderChangeListener);
@@ -441,12 +448,6 @@ public class VirtualRobotController {
         System.out.println("Finished executing runOpModeAndCleanUp() on opModeThread.");
     }
 
-    @FXML
-    private void handleFieldMouseClick(MouseEvent arg){
-        if (opModeInitialized || opModeStarted) return;
-        bot.positionWithMouseClick(arg);
-    }
-
 
     private boolean initOpMode() {
         try {
@@ -517,8 +518,8 @@ public class VirtualRobotController {
         public synchronized int blue(){ return blue; }
 
         public synchronized void updateColor(double x, double y){
-            int colorX = (int)(x + HALF_FIELD_WIDTH);
-            int colorY = (int)(HALF_FIELD_WIDTH - y);
+            int colorX = (int)((x + HALF_FIELD_WIDTH) * backgroundImage.getWidth()/FIELD_WIDTH);
+            int colorY = (int)((HALF_FIELD_WIDTH - y) * backgroundImage.getWidth()/FIELD_WIDTH);
             double tempRed = 0.0;
             double tempGreen = 0.0;
             double tempBlue = 0.0;
@@ -758,22 +759,47 @@ public class VirtualRobotController {
         int row = GridPane.getRowIndex((Button)event.getSource());
         int col = GridPane.getColumnIndex((Button)event.getSource());
         if (row == 1 && col == 1){
+            topView = true;
             cameraElevationTransform.setAngle(0);
             cameraAzimuthTransform.setAngle(0);
             camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI);
         } else {
+            topView = false;
             cameraElevationTransform.setAngle(60);
             cameraAzimuthTransform.setAngle( Math.atan2(col-1, row-1) * 180.0/Math.PI);
             if (row==1 || col==1) {
                 camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI * 1.3);
             } else {
-                camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI * 1.5);
+                camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI * 1.4);
             }
         }
 
     }
 
+    PointLight getLamp(double x, double y, double z){
+        PointLight light = new PointLight(Color.WHITE);
+//        Sphere sphere = new Sphere(3);
+//        sphere.setMaterial(new PhongMaterial(Color.WHITE));
+//        Group result = new Group(light, sphere);
+        light.getTransforms().add(new Translate(x, y, z));
+        return light;
+    }
+
     public void setUp3DSubScene(){
+
+        subSceneGroup = new Group();
+        subScene = new SubScene(subSceneGroup, Config.SUBSCENE_WIDTH, Config.SUBSCENE_WIDTH, true, SceneAntialiasing.DISABLED);
+        subScene.setFill(Color.LIGHTSKYBLUE);
+
+        subScene.setOnMouseClicked(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                if (opModeInitialized || opModeStarted || !topView) return;
+                bot.positionWithMouseClick(event);
+            }
+        });
+
+        borderPane.setCenter(subScene);
 
         camera.getTransforms().addAll(
                 cameraAzimuthTransform,
@@ -787,17 +813,8 @@ public class VirtualRobotController {
 
         camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI);
         camera.setFarClip(1000);
-        camera.setNearClip(10);
+        camera.setNearClip(0.01);
 
-        for (int i=0; i<12; i++){
-            PointLight light = new PointLight(Color.WHITE);
-            light.getTransforms().addAll(
-                    new Rotate(i * 30.0, Rotate.Z_AXIS),
-                    new Rotate(60, Rotate.X_AXIS),
-                    new Translate(0, 0, CAMERA_DISTANCE)
-            );
-            lightGroup.getChildren().add(light);
-        }
 
         TriangleMesh fieldMesh = Util3D.getParametricMesh(-HALF_FIELD_WIDTH, HALF_FIELD_WIDTH,-HALF_FIELD_WIDTH, HALF_FIELD_WIDTH,
                 10, 10, false, false, new Util3D.Param3DEqn() {
@@ -819,14 +836,30 @@ public class VirtualRobotController {
         MeshView fieldView = new MeshView(fieldMesh);
         PhongMaterial fieldMaterial = new PhongMaterial();
         fieldMaterial.setDiffuseColor(Color.gray(0.02));
-        fieldMaterial.setDiffuseMap(Config.BACKGROUND);
-        fieldMaterial.setSelfIlluminationMap(Config.BACKGROUND);
+        fieldMaterial.setDiffuseMap(backgroundImage);
+        fieldMaterial.setSelfIlluminationMap(backgroundImage);
         fieldView.setMaterial(fieldMaterial);
 
         Box testBox = new Box(50, 50, 1);
         testBox.setMaterial(new PhongMaterial(Color.RED));
 
-        subSceneGroup.getChildren().addAll(camera, lightGroup, fieldView);
+
+
+        subSceneGroup.getChildren().addAll(camera, fieldView);
+
+        subSceneGroup.getChildren().addAll(
+                getLamp(0, 0, 36),
+                getLamp(-72, -72, 36),
+                getLamp(0, -72, 6),
+                getLamp(72, -72, 36),
+                getLamp(72, 0, 6),
+                getLamp(72, 72, 36),
+                getLamp(0, 72, 6),
+                getLamp(-72, 72, 36),
+                getLamp(-72, 0, 6),
+                new AmbientLight(Color.WHITE)
+        );
+
         subScene.setCamera(camera);
 
     }

@@ -35,12 +35,11 @@ public class Util3D {
             for (int j=0; j<numPtsS; j++){
                 float s = (float)sMin + j * dS;
                 float t = (float)tMin + i * dT;
-                System.out.println("s = " + s + "  t = " + t);
                 float x = equations.x(s, t);
                 float y = equations.y(s, t);
                 float z = equations.z(s, t);
                 float u = j * dU;
-                float v = i * dV;
+                float v = 1.0f - i * dV;
                 points[3*(numPtsS*i + j)] = x;
                 points[3*(numPtsS*i + j) + 1] = y;
                 points[3*(numPtsS*i + j) + 2] = z;
@@ -151,9 +150,9 @@ public class Util3D {
     }
 
     public static Group box(float length, float height, float depth, int lengthFacets, int heightFacets,
-                      int depthFacets, PhongMaterial... materials){
+                            int depthFacets, PhongMaterial... materials){
         Group group = new Group();
-        TriangleMesh frontMesh = getParametricMesh(-length / 2, length / 2, height / 2, -height / 2, lengthFacets, heightFacets,
+        TriangleMesh backMesh = getParametricMesh(-length / 2, length / 2, height / 2, -height / 2, lengthFacets, heightFacets,
                 new Param3DEqn() {
                     @Override
                     public float x(float s, float t) {
@@ -171,7 +170,7 @@ public class Util3D {
                     }
                 });
 
-        TriangleMesh backMesh = getParametricMesh(-length / 2, length / 2, -height / 2, height / 2, lengthFacets, heightFacets,
+        TriangleMesh frontMesh = getParametricMesh(-length / 2, length / 2, -height / 2, height / 2, lengthFacets, heightFacets,
                 new Param3DEqn() {
                     @Override
                     public float x(float s, float t) {
@@ -225,7 +224,7 @@ public class Util3D {
                     }
                 });
 
-        TriangleMesh topMesh = getParametricMesh(-length / 2, length / 2, -depth / 2, depth / 2, lengthFacets, depthFacets,
+        TriangleMesh topMesh = getParametricMesh(-length / 2, length / 2, depth / 2, -depth / 2, lengthFacets, depthFacets,
                 new Param3DEqn() {
                     @Override
                     public float x(float s, float t) {
@@ -243,7 +242,7 @@ public class Util3D {
                     }
                 });
 
-        TriangleMesh bottomMesh = getParametricMesh(-length / 2, length / 2, depth / 2, -depth / 2, lengthFacets, depthFacets,
+        TriangleMesh bottomMesh = getParametricMesh(-length / 2, length / 2, -depth / 2, depth / 2, lengthFacets, depthFacets,
                 new Param3DEqn() {
                     @Override
                     public float x(float s, float t) {

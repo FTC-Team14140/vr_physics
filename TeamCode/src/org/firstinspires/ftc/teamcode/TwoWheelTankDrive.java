@@ -6,13 +6,15 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-@TeleOp(name = "two wheel demo opmode", group = "TwoWheel")
-public class TwoWheelDemoOpMode extends OpMode {
+@TeleOp(name = "two wheel tank drive", group = "TwoWheel")
+public class TwoWheelTankDrive extends OpMode {
 
     private DcMotor left = null;
     private DcMotor right = null;
+    private DcMotor armExtensionMotor = null;
+    private DcMotor armRotationMotor = null;
     private GyroSensor gyro = null;
-    private Servo backServo = null;
+    private Servo fingerServo = null;
     private ColorSensor colorSensor = null;
     private DistanceSensor frontDistance = null;
     private DistanceSensor leftDistance = null;
@@ -26,8 +28,10 @@ public class TwoWheelDemoOpMode extends OpMode {
         left = hardwareMap.dcMotor.get("left_motor");
         right = hardwareMap.dcMotor.get("right_motor");
         left.setDirection(DcMotor.Direction.REVERSE);
+        armExtensionMotor = hardwareMap.dcMotor.get("arm_extension_motor");
+        armRotationMotor = hardwareMap.dcMotor.get("arm_rotation_motor");
         gyro = hardwareMap.gyroSensor.get("gyro_sensor");
-        backServo = hardwareMap.servo.get("back_servo");
+        fingerServo = hardwareMap.servo.get("finger_servo");
         gyro.init();
         colorSensor = hardwareMap.colorSensor.get("color_sensor");
         frontDistance = hardwareMap.get(DistanceSensor.class, "front_distance");
@@ -47,29 +51,17 @@ public class TwoWheelDemoOpMode extends OpMode {
     }
 
     public void loop(){
-        if (gamepad1.a){
-            telemetry.addData("a pressed","");
-            left.setPower(-.5);
-            right.setPower(-.5);
-        } else if (gamepad1.y) {
-            telemetry.addData("y pressed", "");
-            left.setPower(0.5);
-            right.setPower(0.5);
-        } else if (gamepad1.b){
-            telemetry.addData("b pressed", "");
-            left.setPower(0.5);
-            right.setPower(-0.5);
-        } else if (gamepad1.x){
-            telemetry.addData("x pressed", "");
-            left.setPower(-0.5);
-            right.setPower(0.5);
-        } else {
-            left.setPower(0);
-            right.setPower(0);
-        }
-        backServo.setPosition(0.5 - 0.5* gamepad1.left_stick_y);
-        telemetry.addData("Press", "Y-fwd, A-rev, B-Rt, X-Lt");
-        telemetry.addData("Left Gamepad stick controls back servo","");
+        left.setPower(-gamepad1.left_stick_y);
+        right.setPower(-gamepad1.right_stick_y);
+
+        armExtensionMotor.setPower(-gamepad2.left_stick_y);
+        armRotationMotor.setPower(gamepad2.right_stick_y);
+        if (gamepad2.x) fingerServo.setPosition(1);
+        else if (gamepad2.b) fingerServo.setPosition(0);
+
+        telemetry.addData("Gamepad 1 sticks control drive","");
+        telemetry.addData("Gamepad 2 sticks control arm", "");
+        telemetry.addData("Gamepad 2 X and B control fingers.","");
         telemetry.addData("Color","R %d  G %d  B %d", colorSensor.red(), colorSensor.green(), colorSensor.blue());
         telemetry.addData("Heading"," %.1f", gyro.getHeading());
         telemetry.addData("Encoders","Left %d  Right %d", left.getCurrentPosition(), right.getCurrentPosition());

@@ -20,13 +20,7 @@
 <?import javafx.scene.Group?>
 <?import javafx.scene.PerspectiveCamera?>
 <BorderPane fx:id="borderPane" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="virtual_robot.controller.VirtualRobotController">
-   <center>
-      <SubScene fx:id="subScene" width="800" height="800" fill="lightskyblue">
-         <root>
-            <Group fx:id="subSceneGroup"/>
-         </root>
-      </SubScene>
-   </center>
+
    <right>
       <VBox alignment="CENTER" BorderPane.alignment="TOP_CENTER">
          <children>
