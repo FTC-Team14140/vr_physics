@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.ServoImpl;
 import javafx.fxml.FXML;
 import javafx.geometry.Point3D;
 import javafx.scene.Group;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
@@ -168,12 +169,29 @@ public class MechanumBot extends VirtualBot {
         PhongMaterial chassisMaterial = new PhongMaterial(Color.YELLOW);
         chassisMaterial.setSpecularColor(Color.WHITE);
         chassis.setMaterial(chassisMaterial);
-        Cylinder[] wheels = new Cylinder[4];
-        PhongMaterial wheelMaterial = new PhongMaterial(Color.BLUE);
-        wheelMaterial.setSpecularColor(Color.WHITE);
+        Image wheelImageA = new Image("/virtual_robot/assets/mechwheelA_rotated.jpg");
+        Image wheelImageB = new Image("/virtual_robot/assets/mechwheelB_rotated.jpg");
+        PhongMaterial wheelTreadMaterialA = new PhongMaterial();
+        wheelTreadMaterialA.setDiffuseColor(Color.gray(0.02));
+        wheelTreadMaterialA.setDiffuseMap(wheelImageA);
+        wheelTreadMaterialA.setSelfIlluminationMap(wheelImageA);
+        PhongMaterial wheelTreadMaterialB = new PhongMaterial();
+        wheelTreadMaterialB.setDiffuseColor(Color.gray(0.02));
+        wheelTreadMaterialB.setDiffuseMap(wheelImageB);
+        wheelTreadMaterialB.setSelfIlluminationMap(wheelImageB);
+        PhongMaterial wheelSideMaterial = new PhongMaterial(Color.color(0.9, 0.9, 0.9));
+        wheelSideMaterial.setSpecularColor(Color.color(0, 0, 0, 0));
+        Group[] wheels = new Group[4];
+        wheels[0] = Util3D.cylinder(2, 2, 10, 1, 1,     //back left
+                true, wheelTreadMaterialA, wheelSideMaterial);
+        wheels[1] = Util3D.cylinder(2, 2, 10, 1, 1,     //front left
+                true, wheelTreadMaterialB, wheelSideMaterial);
+        wheels[2] = Util3D.cylinder(2, 2, 10, 1, 1,     //back right
+                true, wheelTreadMaterialB, wheelSideMaterial);
+        wheels[3] = Util3D.cylinder(2, 2, 10, 1, 1,     //front right
+                true, wheelTreadMaterialA, wheelSideMaterial);
+
         for (int i=0; i<4; i++){
-            wheels[i] = new Cylinder(2,2);
-            wheels[i].setMaterial(wheelMaterial);
             wheels[i].setRotationAxis(new Point3D(0, 0, 1));
             wheels[i].setRotate(90);
             wheels[i].setTranslateX(i<2? -8 : 8);

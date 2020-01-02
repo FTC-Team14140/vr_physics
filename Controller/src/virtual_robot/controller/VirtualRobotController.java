@@ -10,16 +10,16 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Point3D;
 import javafx.scene.*;
 import javafx.scene.control.*;
-import javafx.scene.effect.Light;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
+import javafx.scene.shape.Cylinder;
 import javafx.scene.shape.MeshView;
-import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
@@ -90,9 +90,9 @@ public class VirtualRobotController {
     private final Rotate cameraElevationTransform = new Rotate(0, Rotate.X_AXIS);
     private final Rotate cameraAzimuthTransform = new Rotate(0, Rotate.Z_AXIS);
     private final double CAMERA_DISTANCE = 300.0;
-    private final Rotate lightElevationTransform = new Rotate(0, Rotate.Z_AXIS);
-    private final Rotate lightAzimuthTransform = new Rotate(0, Rotate.X_AXIS);
     private boolean topView = true;
+    private PointLight[][] lightArray = new PointLight[3][3];
+    Button currentCameraButton;
 
     //Lists of OpMode classes and OpMode Names
     private ObservableList<Class<?>> nonDisabledOpModeClasses = null;
@@ -130,11 +130,11 @@ public class VirtualRobotController {
 
     public void initialize() {
         setUp3DSubScene();
+        currentCameraButton = (Button)getNodeByGridPaneIndex(cameraGrid, 1, 1);
         OpMode.setVirtualRobotController(this);
         VirtualBot.setController(this);
         setupCbxOpModes();
         setupCbxRobotConfigs();
-        setConfig(null);
         sldRandomMotorError.valueProperty().addListener(sliderChangeListener);
         sldSystematicMotorError.valueProperty().addListener(sliderChangeListener);
         sldMotorInertia.valueProperty().addListener(sliderChangeListener);
@@ -162,7 +162,6 @@ public class VirtualRobotController {
     }
 
     private void setupCbxRobotConfigs(){
-        //Reflections reflections = new Reflections(VirtualRobotApplication.class.getClassLoader());
         Reflections reflections = new Reflections("virtual_robot.controller.robots");
         Set<Class<?>> configClasses = new HashSet<>();
         configClasses.addAll(reflections.getTypesAnnotatedWith(BotConfig.class));
@@ -755,7 +754,20 @@ public class VirtualRobotController {
 
     }
 
-    public void handleCameraButtonAction(ActionEvent event){
+    @FXML public void handleLightButtonAction(ActionEvent event){
+        int row = GridPane.getRowIndex((Button)event.getSource());
+        int col = GridPane.getColumnIndex((Button)event.getSource());
+        PointLight light = lightArray[row][col];
+        if (light.isLightOn()){
+            light.setLightOn(false);
+            ((Button)event.getSource()).setStyle("-fx-background-color: darkgray");
+        } else {
+            light.setLightOn(true);
+            ((Button)event.getSource()).setStyle("-fx-background-color: white");
+        }
+    }
+
+    @FXML public void handleCameraButtonAction(ActionEvent event){
         int row = GridPane.getRowIndex((Button)event.getSource());
         int col = GridPane.getColumnIndex((Button)event.getSource());
         if (row == 1 && col == 1){
@@ -773,14 +785,23 @@ public class VirtualRobotController {
                 camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI * 1.4);
             }
         }
+        if (currentCameraButton != event.getSource()){
+            currentCameraButton.setStyle("-fx-background-color: darkgray");
+            currentCameraButton = (Button)event.getSource();
+            currentCameraButton.setStyle("-fx-background-color: lightblue");
+        }
+    }
 
+    public Node getNodeByGridPaneIndex(GridPane grid, int row, int col){
+        ObservableList<Node> nodes = grid.getChildren();
+        for (Node n: nodes){
+            if (GridPane.getRowIndex(n) == row && GridPane.getColumnIndex(n) == col) return n;
+        }
+        return null;
     }
 
     PointLight getLamp(double x, double y, double z){
         PointLight light = new PointLight(Color.WHITE);
-//        Sphere sphere = new Sphere(3);
-//        sphere.setMaterial(new PhongMaterial(Color.WHITE));
-//        Group result = new Group(light, sphere);
         light.getTransforms().add(new Translate(x, y, z));
         return light;
     }
@@ -840,25 +861,74 @@ public class VirtualRobotController {
         fieldMaterial.setSelfIlluminationMap(backgroundImage);
         fieldView.setMaterial(fieldMaterial);
 
-        Box testBox = new Box(50, 50, 1);
-        testBox.setMaterial(new PhongMaterial(Color.RED));
-
-
-
         subSceneGroup.getChildren().addAll(camera, fieldView);
 
-        subSceneGroup.getChildren().addAll(
-                getLamp(0, 0, 36),
-                getLamp(-72, -72, 36),
-                getLamp(0, -72, 6),
-                getLamp(72, -72, 36),
-                getLamp(72, 0, 6),
-                getLamp(72, 72, 36),
-                getLamp(0, 72, 6),
-                getLamp(-72, 72, 36),
-                getLamp(-72, 0, 6),
-                new AmbientLight(Color.WHITE)
+        PhongMaterial blueBridgeMaterial = new PhongMaterial(Color.BLUE);
+        Cylinder blueBridge1 = new Cylinder(0.5, 50);
+        blueBridge1.setMaterial(blueBridgeMaterial);
+        blueBridge1.getTransforms().addAll(
+                new Translate(-HALF_FIELD_WIDTH+24, 3.0, 14.5),
+                new Rotate(90, Rotate.Z_AXIS)
         );
+        Cylinder blueBridge2 = new Cylinder(0.5, 50);
+        blueBridge2.setMaterial(blueBridgeMaterial);
+        blueBridge2.getTransforms().addAll(
+                new Translate(-HALF_FIELD_WIDTH+24, -3.0, 14.5),
+                new Rotate(90, Rotate.Z_AXIS)
+        );
+        PhongMaterial redBridgeMaterial = new PhongMaterial(Color.RED);
+        Cylinder redBridge1 = new Cylinder(0.5, 50);
+        redBridge1.setMaterial(redBridgeMaterial);
+        redBridge1.getTransforms().addAll(
+                new Translate(HALF_FIELD_WIDTH-24, 3.0, 14.5),
+                new Rotate(90, Rotate.Z_AXIS)
+        );
+        Cylinder redBridge2 = new Cylinder(0.5, 50);
+        redBridge2.setMaterial(redBridgeMaterial);
+        redBridge2.getTransforms().addAll(
+                new Translate(HALF_FIELD_WIDTH-24, -3.0, 14.5),
+                new Rotate(90, Rotate.Z_AXIS)
+        );
+        PhongMaterial neutralBridgeMaterial = new PhongMaterial(Color.ORANGE);
+        Cylinder neutralBridge1 = new Cylinder(0.5, 47);
+        neutralBridge1.setMaterial(neutralBridgeMaterial);
+        neutralBridge1.getTransforms().addAll(
+                new Translate(0, 3.0, 20.5),
+                new Rotate(90, Rotate.Z_AXIS)
+        );
+        Cylinder neutralBridge2 = new Cylinder(0.5, 47);
+        neutralBridge2.setMaterial(neutralBridgeMaterial);
+        neutralBridge2.getTransforms().addAll(
+                new Translate(0, -3.0, 20.5),
+                new Rotate(90, Rotate.Z_AXIS)
+        );
+        PhongMaterial bridgeStandMaterial = new PhongMaterial(Color.CORNSILK);
+        Box bridgeStand1 = new Box(1, 8, 16);
+        bridgeStand1.setMaterial(bridgeStandMaterial);
+        bridgeStand1.getTransforms().add(new Translate(-HALF_FIELD_WIDTH-0.5, 0, 8));
+        Box bridgeStand2 = new Box(1, 8, 22);
+        bridgeStand2.setMaterial(bridgeStandMaterial);
+        bridgeStand2.getTransforms().add(new Translate(-23, 0, 11));
+        Box bridgeStand3 = new Box(1, 8, 22);
+        bridgeStand3.setMaterial(bridgeStandMaterial);
+        bridgeStand3.getTransforms().add(new Translate(23, 0, 11));
+        Box bridgeStand4 = new Box(1, 8, 16);
+        bridgeStand4.setMaterial(bridgeStandMaterial);
+        bridgeStand4.getTransforms().add(new Translate(HALF_FIELD_WIDTH+0.5, 0, 8));
+
+        subSceneGroup.getChildren().addAll(blueBridge1, blueBridge2, redBridge1, redBridge2, neutralBridge1, neutralBridge2,
+                bridgeStand1, bridgeStand2, bridgeStand3, bridgeStand4);
+
+        for (int i=0; i<3; i++) {
+            for (int j = 0; j < 3; j++) {
+                lightArray[i][j] = getLamp(72.0 * (j - 1), 72.0 * (1 - i), 36);
+                lightArray[i][j].setLightOn(false);
+            }
+        }
+
+        subSceneGroup.getChildren().add(new AmbientLight(Color.WHITE));
+
+        for (int i = 0; i < 3; i++) subSceneGroup.getChildren().addAll(lightArray[i]);
 
         subScene.setCamera(camera);
 

@@ -74,10 +74,12 @@ public class Util3D {
 
     }
 
+
     public static TriangleMesh getParametricMesh(double sMin, double sMax, double tMin, double tMax,
                                                  int numFacetS, int numFacetT, Param3DEqn equations){
         return getParametricMesh(sMin, sMax, tMin, tMax, numFacetS, numFacetT, false, false, equations);
     }
+
 
     public static Group cylinder(float radius, float height, int circumferenceFacets, int heightFacets,
                                  int radiusFacets, boolean endCaps, PhongMaterial... materials){
@@ -109,7 +111,7 @@ public class Util3D {
         TriangleMesh capMesh1 = getParametricMesh(0, 2.0 * Math.PI, 0, radius, circumferenceFacets,
                 radiusFacets, new Param3DEqn() {
                     public float x(float s, float t) {
-                        return t * (float)Math.cos(s);
+                        return t * (float)Math.sin(s);
                     }
 
                     public float y(float s, float t) {
@@ -117,14 +119,14 @@ public class Util3D {
                     }
 
                     public float z(float s, float t) {
-                        return t * (float)Math.sin(s);
+                        return t * (float)Math.cos(s);
                     }
                 });
 
-        TriangleMesh capMesh2 = getParametricMesh(2.0 * Math.PI, 0, 0, radius, circumferenceFacets,
+        TriangleMesh capMesh2 = getParametricMesh(0, 2.0 * Math.PI, radius, 0, circumferenceFacets,
                 radiusFacets, new Param3DEqn() {
                     public float x(float s, float t) {
-                        return t * (float)Math.cos(s);
+                        return t * (float)Math.sin(s);
                     }
 
                     public float y(float s, float t) {
@@ -132,7 +134,7 @@ public class Util3D {
                     }
 
                     public float z(float s, float t) {
-                        return t * (float)Math.sin(s);
+                        return t * (float)Math.cos(s);
                     }
                 });
 
@@ -148,6 +150,7 @@ public class Util3D {
         group.getChildren().addAll(capMeshView1, capMeshView2);
         return group;
     }
+
 
     public static Group box(float length, float height, float depth, int lengthFacets, int heightFacets,
                             int depthFacets, PhongMaterial... materials){

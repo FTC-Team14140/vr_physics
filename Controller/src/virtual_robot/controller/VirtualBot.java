@@ -163,7 +163,6 @@ public abstract class VirtualBot {
                     Math.max(-(arg.getY()- Config.SUBSCENE_WIDTH/2.0)*fieldWidth/Config.SUBSCENE_WIDTH, -(halfFieldWidth-halfBotWidth)));
             x = argX;
             y = argY;
-            System.out.println("getX = " + arg.getX() + "  getY = " + arg.getY() + "  x = " + x + "  y = " + y);
             updateDisplay();
         }
         else if (arg.getButton() == MouseButton.SECONDARY){
@@ -173,7 +172,6 @@ public abstract class VirtualBot {
             if (radians > Math.PI) radians -= 2.0*Math.PI;
             else if (radians < -Math.PI) radians += 2.0 * Math.PI;
             headingRadians = radians;
-            System.out.println("clickX = " + clickX + "  clickY = " + clickY);
             updateDisplay();
         }
     }

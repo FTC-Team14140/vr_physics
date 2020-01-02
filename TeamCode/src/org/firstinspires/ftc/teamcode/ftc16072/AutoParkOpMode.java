@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.ftc16072;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -10,7 +11,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
  * For red alliance: start with robot in square next to the blue depot, facing toward the building zone.
  * For blue alliance: start with robot in square next to the blue building site, facing toward the loading zone.
  */
-
+@Disabled
 @TeleOp(name = "auto park opmode", group = "ftc16072")
 public class AutoParkOpMode extends OpMode {
     private Robot robot = new Robot();
