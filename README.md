@@ -1,7 +1,8 @@
 # NEW:  3D Version of Virtual Robot
 
-**NOTE:  NOT ALL HARDWARE WILL SUPPORT JAVA-FX 3D SCENES.**  This runs on a 2016 Dell XPS 8900 Windows 10 desktop,
-but does not run on a 2008 Lenovo Thinkpad T64 (originally Vista, now Windows 10).
+**Some older hardware doesn't support Java FX 3D scenes.**  This runs on several circa 2015-16 Windows 10 and 8 systems
+we have tested on, but not on a 2008 laptop (which was originally Vista, now Windows 10). If your system does not
+support the 3D version, the original 2D version is available here: [virtual_robot](https://github.com/Beta8397/virtual_robot).
 
 A 3D simulator to help beginning Java programmers learn to program for FTC Robotics.
 
@@ -18,14 +19,14 @@ For the X-Drive bot, the distance between the centers of any two adjacent wheels
 encoder. There is a downward-facing color sensor in the center of the robot. A gyro sensor (or BNO055 imu) is also included.
 Each robot has an rotating/extending arm attached to the back, controlled by DC motors. There is a grabber at the
 end of the arm that is controlled by a servo. Each robot also has distance sensors on the front, left, right
-and back sides. A small green rectangle indicates the front of the robot. Wheel diameters are all 4 inches.
+and back sides. Wheel diameters are all 4 inches.
 
 The field can be thought of as 12 feet wide. The field graphic (currently the Skystone field)
 is obtained from a bitmap (.bmp) image. The color sensor detects the field color beneath the center of the
 robot. The field graphic is easily changed by providing a different .bmp image in the virtual_robot.config.Config class.
 The .bmp image is the skysone_field648.bmp file in the virtual_robot.assets folder. As is, the 3D display scene is
 800x800 pixels. This can be increased or decreased by changing the value of SUBSCENE_WIDTH in the
-virtual_robot.config.Config.java class.
+virtual_robot.config.Config.java class. Note: changing the subscene width does not require a change in the field graphic.
 
 An abridged approximation of the FTC SDK is provided.
 
@@ -41,17 +42,18 @@ The OpMode (and therefore LinearOpMode) class in the simulator provides access t
 
 Several example OpModes are provided in the org.firstinspires.ftc.teamcode package.
 
-Some recent changes have simplified the process of creating new robot configurations (see  Log of Changes below).
+New robot configurations can be created by extending the VirtualBot class; this requires some familiarity with the
+JavaFX 3D API. Questions about this are welcome (via "Issues").
 
 To use:
 
   1. Make sure you have the Java 8 JDK installed on your PC. Also, install the free Community Edition of JetBrains
      IntelliJ IDEA.
-  2. Download the virtual_robot .zip, and extract contents. Open the project in IntelliJ. You'll see three modules in
+  2. Download the virtual_robot_3D.zip, and extract contents. Open the project in IntelliJ. You'll see three modules in
      the project (Controller, TeamCode, and virtual_robot) -- the only module you'll need to touch is TeamCode. It
      contains the org.firstinspires.ftc.teamcode package.
-  3. Write your OpModes in the org.firstinspires.ftc.teamcode package; make sure to include a @TeleOp or @Autonomous annotation. These must
-    extend the OpMode class (may either extend OpMode OR LinearOpMode). OpMode must provide init() and loop() methods;
+  3. Write your OpModes in the org.firstinspires.ftc.teamcode package; make sure to include a @TeleOp or @Autonomous annotation.
+     These must extend the OpMode class (may either extend OpMode OR LinearOpMode). OpMode must provide init() and loop() methods;
      LinearOpMode must provide runOpMode() method.
   4. Make sure at least one gamepad is plugged in to the computer.
   5. Run the application (by clicking the green arrowhead at the toolbar).
@@ -59,7 +61,7 @@ To use:
   7. Use Configuration dropdown box to select a robot configuration. The configuration will be displayed.
   8. Use the Op Mode drop down box to select the desired OpMode.
   9. Prior to initialization, position the robot on the field by left-mouse-clicking the field (for robot position),
-     and right-mouse-clicking (for robot orientation). This must be done with 3D camera in overhead view.
+     and right-mouse-clicking (for robot orientation). This must be done with 3D camera in overhead view (center button).
   10. Use the INIT/START/STOP button as you would on the FTC Driver Station.
   11. Use the Camera buttons on the left to change the position of the 3D camera.
   12. If desired use the sliders to introduce random and systematic motor error, and inertia.
