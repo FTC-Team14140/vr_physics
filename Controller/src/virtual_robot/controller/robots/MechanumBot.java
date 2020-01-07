@@ -7,15 +7,14 @@ import javafx.scene.Group;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Box;
-import javafx.scene.shape.Cylinder;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.*;
 import javafx.scene.transform.Rotate;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.hardware.bosch.BNO055IMUImpl;
 import com.qualcomm.robotcore.hardware.DcMotorImpl;
 import com.qualcomm.robotcore.hardware.MotorType;
 import javafx.scene.transform.Translate;
+import util3d.Parts;
 import util3d.Util3D;
 import virtual_robot.controller.BotConfig;
 import virtual_robot.controller.VirtualBot;
@@ -76,7 +75,6 @@ public class MechanumBot extends VirtualBot {
                 hardwareMap.get(VirtualRobotController.DistanceSensorImpl.class, "back_distance"),
                 hardwareMap.get(VirtualRobotController.DistanceSensorImpl.class, "right_distance")
         };
-        //gyro = (VirtualRobotController.GyroSensorImpl)hardwareMap.gyroSensor.get("gyro_sensor");
         imu = hardwareMap.get(BNO055IMUImpl.class, "imu");
         colorSensor = (VirtualRobotController.ColorSensorImpl)hardwareMap.colorSensor.get("color_sensor");
         fingerServo = (ServoImpl)hardwareMap.servo.get("finger_servo");
@@ -102,7 +100,7 @@ public class MechanumBot extends VirtualBot {
         String[] distNames = new String[]{"front_distance", "left_distance", "back_distance", "right_distance"};
         for (String name: distNames) hardwareMap.put(name, controller.new DistanceSensorImpl());
         //hardwareMap.put("gyro_sensor", controller.new GyroSensorImpl());
-        hardwareMap.put("imu", new BNO055IMUImpl(this, 175));
+        hardwareMap.put("imu", new BNO055IMUImpl(this, 10));
         hardwareMap.put("color_sensor", controller.new ColorSensorImpl());
         hardwareMap.put("finger_servo", new ServoImpl());
     }
@@ -165,37 +163,27 @@ public class MechanumBot extends VirtualBot {
     }
 
     protected Group getDisplayGroup(){
-        Box chassis = new Box(14, 18, 2);
-        PhongMaterial chassisMaterial = new PhongMaterial(Color.YELLOW);
-        chassisMaterial.setSpecularColor(Color.WHITE);
-        chassis.setMaterial(chassisMaterial);
-        Image wheelImageA = new Image("/virtual_robot/assets/mechwheelA_rotated.jpg");
-        Image wheelImageB = new Image("/virtual_robot/assets/mechwheelB_rotated.jpg");
-        PhongMaterial wheelTreadMaterialA = new PhongMaterial();
-        wheelTreadMaterialA.setDiffuseColor(Color.gray(0.02));
-        wheelTreadMaterialA.setDiffuseMap(wheelImageA);
-        wheelTreadMaterialA.setSelfIlluminationMap(wheelImageA);
-        PhongMaterial wheelTreadMaterialB = new PhongMaterial();
-        wheelTreadMaterialB.setDiffuseColor(Color.gray(0.02));
-        wheelTreadMaterialB.setDiffuseMap(wheelImageB);
-        wheelTreadMaterialB.setSelfIlluminationMap(wheelImageB);
-        PhongMaterial wheelSideMaterial = new PhongMaterial(Color.color(0.9, 0.9, 0.9));
-        wheelSideMaterial.setSpecularColor(Color.color(0, 0, 0, 0));
-        Group[] wheels = new Group[4];
-        wheels[0] = Util3D.cylinder(2, 2, 10, 1, 1,     //back left
-                true, wheelTreadMaterialA, wheelSideMaterial);
-        wheels[1] = Util3D.cylinder(2, 2, 10, 1, 1,     //front left
-                true, wheelTreadMaterialB, wheelSideMaterial);
-        wheels[2] = Util3D.cylinder(2, 2, 10, 1, 1,     //back right
-                true, wheelTreadMaterialB, wheelSideMaterial);
-        wheels[3] = Util3D.cylinder(2, 2, 10, 1, 1,     //front right
-                true, wheelTreadMaterialA, wheelSideMaterial);
+        Group chassis = new Group();
+        Group leftRail = Parts.tetrixBox(2, 18, 2, 2);
+        leftRail.setTranslateX(-6);
+        Group rightRail = Parts.tetrixBox(2, 18, 2, 2);
+        rightRail.setTranslateX(6);
+        Group frontRail = Parts.tetrixBox(2, 10, 2, 2);
+        frontRail.getTransforms().addAll(new Translate(0, 8, 0), new Rotate(90, new Point3D(0,0,1)));
+        Group backRail = Parts.tetrixBox(2, 10, 2, 2);
+        backRail.getTransforms().addAll(new Translate(0, -8, 0), new Rotate(90, new Point3D(0, 0, 1)));
+        Box center = new Box(10, 14, 2);
+        center.setMaterial(new PhongMaterial(Color.YELLOW));
 
+        chassis.getChildren().addAll(leftRail, rightRail, frontRail, backRail, center);
+
+        Group[] wheels = new Group[4];
         for (int i=0; i<4; i++){
+            wheels[i] = Parts.mecanumWheel(4, 2, i);
             wheels[i].setRotationAxis(new Point3D(0, 0, 1));
             wheels[i].setRotate(90);
             wheels[i].setTranslateX(i<2? -8 : 8);
-            wheels[i].setTranslateY(i%2==0? -7 : 7);
+            wheels[i].setTranslateY(i==0 || i==3? -7 : 7);
         }
 
         PhongMaterial armMaterial = new PhongMaterial(Color.FUCHSIA);
@@ -253,7 +241,6 @@ public class MechanumBot extends VirtualBot {
 
     public void powerDownAndReset(){
         for (int i=0; i<4; i++) motors[i].stopAndReset();
-        //gyro.deinit();
         imu.close();
     }
 

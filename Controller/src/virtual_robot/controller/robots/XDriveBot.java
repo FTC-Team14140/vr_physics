@@ -91,7 +91,7 @@ public class XDriveBot extends VirtualBot {
         for (String name: motorNames) hardwareMap.put(name, new DcMotorImpl(motorType));
         String[] distNames = new String[]{"front_distance", "left_distance", "back_distance", "right_distance"};
         for (String name: distNames) hardwareMap.put(name, controller.new DistanceSensorImpl());
-        hardwareMap.put("imu", new BNO055IMUImpl(this, 175));
+        hardwareMap.put("imu", new BNO055IMUImpl(this, 10));
         hardwareMap.put("color_sensor", controller.new ColorSensorImpl());
         hardwareMap.put("finger_servo", new ServoImpl());
     }

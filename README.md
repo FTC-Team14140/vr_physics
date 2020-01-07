@@ -69,6 +69,11 @@ To use:
 
 LOG OF CHANGES
 
+CHANGES 1/7/2020
+    Added 3D Utilities to make creation of robot configurations easier. Changed appearance of mechanum bot. Changed
+    latency of IMU and MR-style gyro to 10 ms (it was 175 ms, much longer than is now seen with the "real" IMU).
+    Added 3D SkyStone bridge to the scene.
+
 CHANGES 12/31/2019
     Modified the original Virtual Robot application to use JavaFX 3D graphics. It is possible to create new robot
     configurations, but for the 3D version this is done completely in Java code.

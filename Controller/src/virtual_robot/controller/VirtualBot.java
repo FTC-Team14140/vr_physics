@@ -86,20 +86,6 @@ public abstract class VirtualBot {
         displayGroup = getDisplayGroup();
 
         /*
-           Create a transparent 144x144 Box to serve as the base layer of the robot. It will go
-           around the robot itself.
-        */
-
-//        Box baseBox = new Box(144, 144, 144);
-//        baseBox.setMaterial(new PhongMaterial(Color.TRANSPARENT));
-
-
-        //Create a new display group with the 600x600 transparent rectangle as its base layer, and
-        //the original display group as its upper layer.
-
-//        displayGroup = new Group(baseBox, displayGroup);
-
-        /*
           Add transforms. They will be applied in the opposite order from the order in which they are added.
           The scale transform scales the entire display group so that the base layer has the same width as the field,
           and the chassis rectangle (originally the 75x75 rectangle) is one-eight of the field width.

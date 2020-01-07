@@ -76,7 +76,7 @@ public class TwoWheelBot extends VirtualBot {
         hardwareMap.put("arm_rotation_motor", new DcMotorImpl(motorType));
         String[] distNames = new String[]{"front_distance", "left_distance", "back_distance", "right_distance"};
         for (String name: distNames) hardwareMap.put(name, controller.new DistanceSensorImpl());
-        hardwareMap.put("gyro_sensor", new GyroSensorImpl(this, 175));
+        hardwareMap.put("gyro_sensor", new GyroSensorImpl(this, 10));
         hardwareMap.put("color_sensor", controller.new ColorSensorImpl());
         hardwareMap.put("finger_servo", new ServoImpl());
     }
