@@ -27,6 +27,7 @@ import javafx.scene.transform.Translate;
 import javafx.util.Callback;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.reflections.Reflections;
+import util3d.Parts;
 import util3d.Util3D;
 import virtual_robot.config.Config;
 import javafx.application.Platform;
@@ -814,8 +815,57 @@ public class VirtualRobotController {
         return light;
     }
 
+    private void handleSubSceneMouseEvents(MouseEvent event){
+        if (event.getEventType() == MouseEvent.MOUSE_CLICKED) {
 
-    public void setUp3DSubScene(){
+            if (opModeInitialized || opModeStarted || !topView) return;
+            bot.positionWithMouseClick(event);
+        } else if (event.getEventType() == MouseDragEvent.DRAG_DETECTED){
+            if (!topView) {
+                mouseX = event.getSceneX();
+                mouseY = event.getSceneY();
+                subScene.startFullDrag();
+                currentCameraButton.setStyle("-fx-background-color: darkgray");
+            }
+        } else if (event.getEventType() == MouseDragEvent.MOUSE_DRAG_OVER){
+            if (!topView) {
+                double deltaX = (event.getSceneX() - mouseX) / subScene.getWidth();
+                double deltaY = (event.getSceneY() - mouseY) / subScene.getHeight();
+                mouseX = event.getSceneX();
+                mouseY = event.getSceneY();
+                if (event.isPrimaryButtonDown()) {
+                    if (!event.isAltDown()) {
+                        double elev = cameraElevationTransform.getAngle();
+                        elev -= deltaY * 90.0;
+                        elev = Math.min(80, Math.max(0, elev));
+                        double azim = cameraAzimuthTransform.getAngle();
+                        azim -= deltaX * 90.0;
+                        cameraElevationTransform.setAngle(elev);
+                        cameraAzimuthTransform.setAngle(azim);
+                    } else {
+                        double fov = camera.getFieldOfView();
+                        fov -= 90 * deltaY;
+                        fov = Math.min(90, Math.max(10, fov));
+                        camera.setFieldOfView(fov);
+                    }
+                } else {
+                    double steerX = cameraSteerXTransform.getAngle();
+                    double steerY = cameraSteerYTransform.getAngle();
+                    steerX += deltaY * 45;
+                    steerY -= deltaX * 45;
+                    steerX = Math.min(20, Math.max(-20, steerX));
+                    steerY = Math.min(20, Math.max(-20, steerY));
+                    cameraSteerXTransform.setAngle(steerX);
+                    cameraSteerYTransform.setAngle(steerY);
+                }
+            }
+        }
+
+        event.consume();
+    }
+
+
+    private void setUp3DSubScene(){
 
         subSceneGroup = new Group();
         subScene = new SubScene(subSceneGroup, Config.SUBSCENE_WIDTH, Config.SUBSCENE_WIDTH, true, SceneAntialiasing.DISABLED);
@@ -824,59 +874,21 @@ public class VirtualRobotController {
         subScene.setOnMouseClicked(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
-                if (opModeInitialized || opModeStarted || !topView) return;
-                bot.positionWithMouseClick(event);
+                handleSubSceneMouseEvents(event);
             }
         });
 
         subScene.setOnDragDetected(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
-                if (!topView) {
-                    mouseX = event.getSceneX();
-                    mouseY = event.getSceneY();
-                    subScene.startFullDrag();
-                    currentCameraButton.setStyle("-fx-background-color: darkgray");
-                }
-                event.consume();
+                handleSubSceneMouseEvents(event);
             }
         });
 
         subScene.setOnMouseDragOver(new EventHandler<MouseDragEvent>() {
             @Override
             public void handle(MouseDragEvent event) {
-                if (!topView) {
-                    double deltaX = (event.getSceneX() - mouseX) / subScene.getWidth();
-                    double deltaY = (event.getSceneY() - mouseY) / subScene.getHeight();
-                    mouseX = event.getSceneX();
-                    mouseY = event.getSceneY();
-                    if (event.isPrimaryButtonDown()) {
-                        if (!event.isAltDown()) {
-                            double elev = cameraElevationTransform.getAngle();
-                            elev -= deltaY * 90.0;
-                            elev = Math.min(80, Math.max(0, elev));
-                            double azim = cameraAzimuthTransform.getAngle();
-                            azim -= deltaX * 90.0;
-                            cameraElevationTransform.setAngle(elev);
-                            cameraAzimuthTransform.setAngle(azim);
-                        } else {
-                            double fov = camera.getFieldOfView();
-                            fov -= 90 * deltaY;
-                            fov = Math.min(90, Math.max(10, fov));
-                            camera.setFieldOfView(fov);
-                        }
-                    } else {
-                        double steerX = cameraSteerXTransform.getAngle();
-                        double steerY = cameraSteerYTransform.getAngle();
-                        steerX += deltaY * 45;
-                        steerY -= deltaX * 45;
-                        steerX = Math.min(20, Math.max(-20, steerX));
-                        steerY = Math.min(20, Math.max(-20, steerY));
-                        cameraSteerXTransform.setAngle(steerX);
-                        cameraSteerYTransform.setAngle(steerY);
-                    }
-                }
-                event.consume();
+                handleSubSceneMouseEvents(event);
             }
         });
 
@@ -891,12 +903,9 @@ public class VirtualRobotController {
                 cameraSteerXTransform
         );
 
-        cameraElevationTransform.setAngle(0);
-        cameraAzimuthTransform.setAngle(0);
-
         camera.setFieldOfView(2 * Math.atan(FIELD_WIDTH/(2.0 * CAMERA_DISTANCE)) * 180.0 / Math.PI);
-        camera.setFarClip(1000);
-        camera.setNearClip(0.01);
+        camera.setFarClip(CAMERA_DISTANCE + HALF_FIELD_WIDTH*1.6);
+        camera.setNearClip(CAMERA_DISTANCE - HALF_FIELD_WIDTH*1.6);
 
 
         TriangleMesh fieldMesh = Util3D.getParametricMesh(-HALF_FIELD_WIDTH, HALF_FIELD_WIDTH,-HALF_FIELD_WIDTH, HALF_FIELD_WIDTH,
@@ -925,61 +934,9 @@ public class VirtualRobotController {
 
         subSceneGroup.getChildren().addAll(camera, fieldView);
 
-        PhongMaterial blueBridgeMaterial = new PhongMaterial(Color.BLUE);
-        Cylinder blueBridge1 = new Cylinder(0.5, 50);
-        blueBridge1.setMaterial(blueBridgeMaterial);
-        blueBridge1.getTransforms().addAll(
-                new Translate(-HALF_FIELD_WIDTH+24, 3.0, 14.5),
-                new Rotate(90, Rotate.Z_AXIS)
-        );
-        Cylinder blueBridge2 = new Cylinder(0.5, 50);
-        blueBridge2.setMaterial(blueBridgeMaterial);
-        blueBridge2.getTransforms().addAll(
-                new Translate(-HALF_FIELD_WIDTH+24, -3.0, 14.5),
-                new Rotate(90, Rotate.Z_AXIS)
-        );
-        PhongMaterial redBridgeMaterial = new PhongMaterial(Color.RED);
-        Cylinder redBridge1 = new Cylinder(0.5, 50);
-        redBridge1.setMaterial(redBridgeMaterial);
-        redBridge1.getTransforms().addAll(
-                new Translate(HALF_FIELD_WIDTH-24, 3.0, 14.5),
-                new Rotate(90, Rotate.Z_AXIS)
-        );
-        Cylinder redBridge2 = new Cylinder(0.5, 50);
-        redBridge2.setMaterial(redBridgeMaterial);
-        redBridge2.getTransforms().addAll(
-                new Translate(HALF_FIELD_WIDTH-24, -3.0, 14.5),
-                new Rotate(90, Rotate.Z_AXIS)
-        );
-        PhongMaterial neutralBridgeMaterial = new PhongMaterial(Color.ORANGE);
-        Cylinder neutralBridge1 = new Cylinder(0.5, 47);
-        neutralBridge1.setMaterial(neutralBridgeMaterial);
-        neutralBridge1.getTransforms().addAll(
-                new Translate(0, 3.0, 20.5),
-                new Rotate(90, Rotate.Z_AXIS)
-        );
-        Cylinder neutralBridge2 = new Cylinder(0.5, 47);
-        neutralBridge2.setMaterial(neutralBridgeMaterial);
-        neutralBridge2.getTransforms().addAll(
-                new Translate(0, -3.0, 20.5),
-                new Rotate(90, Rotate.Z_AXIS)
-        );
-        PhongMaterial bridgeStandMaterial = new PhongMaterial(Color.CORNSILK);
-        Box bridgeStand1 = new Box(1, 8, 16);
-        bridgeStand1.setMaterial(bridgeStandMaterial);
-        bridgeStand1.getTransforms().add(new Translate(-HALF_FIELD_WIDTH-0.5, 0, 8));
-        Box bridgeStand2 = new Box(1, 8, 22);
-        bridgeStand2.setMaterial(bridgeStandMaterial);
-        bridgeStand2.getTransforms().add(new Translate(-23, 0, 11));
-        Box bridgeStand3 = new Box(1, 8, 22);
-        bridgeStand3.setMaterial(bridgeStandMaterial);
-        bridgeStand3.getTransforms().add(new Translate(23, 0, 11));
-        Box bridgeStand4 = new Box(1, 8, 16);
-        bridgeStand4.setMaterial(bridgeStandMaterial);
-        bridgeStand4.getTransforms().add(new Translate(HALF_FIELD_WIDTH+0.5, 0, 8));
+        Group bridgeGroup = Parts.skyStoneBridge();
 
-        subSceneGroup.getChildren().addAll(blueBridge1, blueBridge2, redBridge1, redBridge2, neutralBridge1, neutralBridge2,
-                bridgeStand1, bridgeStand2, bridgeStand3, bridgeStand4);
+        subSceneGroup.getChildren().add(bridgeGroup);
 
         for (int i=0; i<3; i++) {
             for (int j = 0; j < 3; j++) {
