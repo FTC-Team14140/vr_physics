@@ -13,6 +13,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.geometry.Point3D;
 import javafx.scene.*;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseDragEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -68,6 +69,9 @@ public class VirtualRobotController {
     private SubScene subScene;
     private Group subSceneGroup;
 
+    private double mouseX = 0;
+    private double mouseY = 0;
+
     //Virtual Hardware
     private HardwareMap hardwareMap = null;
     private VirtualBot bot = null;
@@ -89,6 +93,8 @@ public class VirtualRobotController {
     private final PerspectiveCamera camera = new PerspectiveCamera(true);
     private final Rotate cameraElevationTransform = new Rotate(0, Rotate.X_AXIS);
     private final Rotate cameraAzimuthTransform = new Rotate(0, Rotate.Z_AXIS);
+    private final Rotate cameraSteerXTransform = new Rotate(0, Rotate.X_AXIS);
+    private final Rotate cameraSteerYTransform = new Rotate(0, Rotate.Y_AXIS);
     private final double CAMERA_DISTANCE = 300.0;
     private boolean topView = true;
     private PointLight[][] lightArray = new PointLight[3][3];
@@ -770,6 +776,8 @@ public class VirtualRobotController {
     @FXML public void handleCameraButtonAction(ActionEvent event){
         int row = GridPane.getRowIndex((Button)event.getSource());
         int col = GridPane.getColumnIndex((Button)event.getSource());
+        cameraSteerXTransform.setAngle(0);
+        cameraSteerYTransform.setAngle(0);
         if (row == 1 && col == 1){
             topView = true;
             cameraElevationTransform.setAngle(0);
@@ -806,6 +814,7 @@ public class VirtualRobotController {
         return light;
     }
 
+
     public void setUp3DSubScene(){
 
         subSceneGroup = new Group();
@@ -820,13 +829,66 @@ public class VirtualRobotController {
             }
         });
 
+        subScene.setOnDragDetected(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                if (!topView) {
+                    mouseX = event.getSceneX();
+                    mouseY = event.getSceneY();
+                    subScene.startFullDrag();
+                    currentCameraButton.setStyle("-fx-background-color: darkgray");
+                }
+                event.consume();
+            }
+        });
+
+        subScene.setOnMouseDragOver(new EventHandler<MouseDragEvent>() {
+            @Override
+            public void handle(MouseDragEvent event) {
+                if (!topView) {
+                    double deltaX = (event.getSceneX() - mouseX) / subScene.getWidth();
+                    double deltaY = (event.getSceneY() - mouseY) / subScene.getHeight();
+                    mouseX = event.getSceneX();
+                    mouseY = event.getSceneY();
+                    if (event.isPrimaryButtonDown()) {
+                        if (!event.isAltDown()) {
+                            double elev = cameraElevationTransform.getAngle();
+                            elev -= deltaY * 90.0;
+                            elev = Math.min(80, Math.max(0, elev));
+                            double azim = cameraAzimuthTransform.getAngle();
+                            azim -= deltaX * 90.0;
+                            cameraElevationTransform.setAngle(elev);
+                            cameraAzimuthTransform.setAngle(azim);
+                        } else {
+                            double fov = camera.getFieldOfView();
+                            fov -= 90 * deltaY;
+                            fov = Math.min(90, Math.max(10, fov));
+                            camera.setFieldOfView(fov);
+                        }
+                    } else {
+                        double steerX = cameraSteerXTransform.getAngle();
+                        double steerY = cameraSteerYTransform.getAngle();
+                        steerX += deltaY * 45;
+                        steerY -= deltaX * 45;
+                        steerX = Math.min(20, Math.max(-20, steerX));
+                        steerY = Math.min(20, Math.max(-20, steerY));
+                        cameraSteerXTransform.setAngle(steerX);
+                        cameraSteerYTransform.setAngle(steerY);
+                    }
+                }
+                event.consume();
+            }
+        });
+
         borderPane.setCenter(subScene);
 
         camera.getTransforms().addAll(
                 cameraAzimuthTransform,
                 cameraElevationTransform,
                 new Rotate(180, Rotate.X_AXIS),
-                new Translate(0, 0, -CAMERA_DISTANCE)
+                new Translate(0, 0, -CAMERA_DISTANCE),
+                cameraSteerYTransform,
+                cameraSteerXTransform
         );
 
         cameraElevationTransform.setAngle(0);
