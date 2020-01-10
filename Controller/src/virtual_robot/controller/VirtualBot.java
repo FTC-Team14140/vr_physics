@@ -24,19 +24,17 @@ import virtual_robot.config.Config;
  *
  *   A robot config class that extend VirtualBot must:
  *
- *   1) Provide a no-argument constructor whose first statement is super();
- *   2) Be the controller class for an .fxml file that defines the graphical respresentation of the bot;
+ *   1) Provide a no-argument init() method whose first statement is super.init();
+ *   2) Provide a setupDisplayGroup() method that returns a JavaFX Group object (the graphical representation
+ *          of the robot).
  *   3) Provide a createHardwareMap() method;
  *   4) Provide a public synchronized updateStateAndSensors(double millis) method;
  *   5) Provide a public powerDownAndReset() method.
  *
  *   Optionally (and in most cases), it will also be necessary to:
  *
- *   1) Provide a public initialize() method for initialization of accessories whose appearance will change
- *      as the robot operates.
- *   2) Override the public synchronized updateDisplay() method to update the appearance of accessories.
- *
- *   The ArmBot class has detailed comments regarding the workings of these methods.
+ *   Override the public synchronized updateDisplay() method to update the appearance of accessories.
+ *   This override should have super.updateDisplay() as its first statement.
  *
  */
 public abstract class VirtualBot {
@@ -59,11 +57,15 @@ public abstract class VirtualBot {
 
     public VirtualBot(){
         subSceneGroup = controller.getSubSceneGroup();
-        createHardwareMap();
         this.fieldWidth = VirtualRobotController.FIELD_WIDTH;
         halfFieldWidth = fieldWidth / 2.0;
         botWidth = fieldWidth / 8.0;
         halfBotWidth = botWidth / 2.0;
+    }
+
+    public void init(){
+        createHardwareMap();
+        setUpDisplayGroup();
     }
 
     static void setController(VirtualRobotController ctrl){

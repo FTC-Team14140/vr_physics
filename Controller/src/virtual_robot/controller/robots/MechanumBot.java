@@ -31,7 +31,7 @@ import virtual_robot.util.AngleUtils;
 @BotConfig(name = "Mechanum Bot")
 public class MechanumBot extends VirtualBot {
 
-    MotorType motorType;
+    public final MotorType motorType = MotorType.Neverest40;
     private DcMotorImpl[] motors = null;
     private DcMotorImpl armExtensionMotor = null;
     private DcMotorImpl armRotationMotor = null;
@@ -56,9 +56,16 @@ public class MechanumBot extends VirtualBot {
     double armRotation = 0;
     double armExtension = 0;
 
+    /**
+     *  Overrides the init() method of VirtualBot. The override method must call super.init() as its first statement.
+     */
+    @Override
+    public void init(){
+        //This call ensures that the hardware map and display group get created
+        super.init();
 
-    public MechanumBot(){
-        super();
+        //Everything else in this method is for convenience. e.g., all of the hardware references could be
+        //repeatedly obtained from the hardware map within updateStateAndSensors()
         motors = new DcMotorImpl[]{
                 (DcMotorImpl)hardwareMap.dcMotor.get("back_left_motor"),
                 (DcMotorImpl)hardwareMap.dcMotor.get("front_left_motor"),
@@ -91,8 +98,10 @@ public class MechanumBot extends VirtualBot {
         };
     }
 
+    /**
+     *  Create the hardware map for this robot.
+     */
     protected void createHardwareMap(){
-        motorType = MotorType.Neverest40;
         hardwareMap = new HardwareMap();
         String[] motorNames = new String[] {"back_left_motor", "front_left_motor", "front_right_motor", "back_right_motor",
                 "arm_rotation_motor", "arm_extension_motor"};
@@ -105,6 +114,16 @@ public class MechanumBot extends VirtualBot {
         hardwareMap.put("finger_servo", new ServoImpl());
     }
 
+    /**
+     * Update robot state (including the state of all sensors after a time interval millis.
+     *
+     * NOTE: This method should update VARIABLES that represent the robot state, but should not actually
+     * update the robot display itself, because it is called from a non-UI thread. Instead, the variables
+     * that are updated in the updateStateAndSensors() method should be used in the updateDisplay()
+     * method to actually update the display.
+     *
+     * @param millis milliseconds since the previous update
+     */
     public synchronized void updateStateAndSensors(double millis){
 
         double[] deltaPos = new double[4];
@@ -162,6 +181,10 @@ public class MechanumBot extends VirtualBot {
 
     }
 
+    /**
+     * Create (and return) the 3D display group for this robot.
+     * @return javafx 3D display group
+     */
     protected Group getDisplayGroup(){
         Group chassis = new Group();
         Group leftRail = Parts.tetrixBox(2, 18, 2, 2);
@@ -227,6 +250,13 @@ public class MechanumBot extends VirtualBot {
         return botGroup;
     }
 
+    /**
+     *  Update the display of the robot based upon whatever changes have occurred during the last call to
+     *  updateStateAndSensors. The first statement of this method must be: super.updateDisplay() -- this call
+     *  updates the position and orientation of the robot on the field. All other changes in robot appearance
+     *  must be coded in this updateDisplay() method. This method will be run on the Application (i.e., UI)
+     *  thread via a call to Platform.runLater(...).
+     */
     @Override
     public synchronized void updateDisplay(){
         super.updateDisplay();

@@ -27,7 +27,7 @@ import virtual_robot.util.AngleUtils;
 @BotConfig(name = "XDrive Bot")
 public class XDriveBot extends VirtualBot {
 
-    MotorType motorType;
+    public final MotorType motorType = MotorType.Neverest40;
     private DcMotorImpl[] motors = null;
     private DcMotorImpl armExtensionMotor = null;
     private DcMotorImpl armRotationMotor = null;
@@ -50,9 +50,9 @@ public class XDriveBot extends VirtualBot {
     double armRotation = 0;
     double armExtension = 0;
 
-
-    public XDriveBot() {
-        super();
+    @Override
+    public void init() {
+        super.init();
         motors = new DcMotorImpl[]{
                 (DcMotorImpl)hardwareMap.dcMotor.get("back_left_motor"),
                 (DcMotorImpl)hardwareMap.dcMotor.get("front_left_motor"),
@@ -84,7 +84,6 @@ public class XDriveBot extends VirtualBot {
     }
 
     protected void createHardwareMap(){
-        motorType = MotorType.Neverest40;
         hardwareMap = new HardwareMap();
         String[] motorNames = new String[] {"back_left_motor", "front_left_motor", "front_right_motor",
                 "back_right_motor", "arm_extension_motor", "arm_rotation_motor"};

@@ -25,7 +25,7 @@ import virtual_robot.util.AngleUtils;
 @BotConfig(name = "Two Wheel Bot")
 public class TwoWheelBot extends VirtualBot {
 
-    private MotorType motorType;
+    public final MotorType motorType = MotorType.Neverest40;
     private DcMotorImpl leftMotor = null;
     private DcMotorImpl rightMotor = null;
     private DcMotorImpl armExtensionMotor = null;
@@ -48,8 +48,9 @@ public class TwoWheelBot extends VirtualBot {
 
 
 
-    public TwoWheelBot(){
-        super();
+    @Override
+    public void init(){
+        super.init();
         leftMotor = (DcMotorImpl)hardwareMap.dcMotor.get("left_motor");
         rightMotor = (DcMotorImpl)hardwareMap.dcMotor.get("right_motor");
         armRotationMotor = (DcMotorImpl)hardwareMap.dcMotor.get("arm_rotation_motor");
@@ -68,7 +69,6 @@ public class TwoWheelBot extends VirtualBot {
     }
 
     protected void createHardwareMap(){
-        motorType = MotorType.Neverest40;
         hardwareMap = new HardwareMap();
         hardwareMap.put("left_motor", new DcMotorImpl(motorType));
         hardwareMap.put("right_motor", new DcMotorImpl(motorType));

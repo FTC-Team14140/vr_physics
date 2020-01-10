@@ -217,7 +217,7 @@ public class VirtualRobotController {
     public VirtualBot getVirtualBotInstance(Class<?> c){
         try {
             VirtualBot bot = (VirtualBot)c.newInstance();
-            bot.setUpDisplayGroup();
+            bot.init();
             return bot;
         } catch (Exception e){
             System.out.println("Unable to load robot configuration.");
