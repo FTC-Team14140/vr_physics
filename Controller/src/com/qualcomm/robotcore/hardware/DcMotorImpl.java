@@ -29,6 +29,8 @@ public class DcMotorImpl implements DcMotor {
     //position to use as baseline for encoder tick calculation
     private double encoderBasePosition = 0.0;
 
+    private boolean supportsError = true;
+    private boolean supportsInertia = true;
     private double randomErrorFrac = 0.0;
     private double systematicErrorFrac = 0.0;
     private double inertia;
@@ -41,6 +43,18 @@ public class DcMotorImpl implements DcMotor {
      */
     public DcMotorImpl(MotorType motorType){
         MOTOR_TYPE = motorType;
+    }
+
+    /**
+     * For internal use only
+     * @param motorType
+     * @param supportsError  True, if motor is to be affected by random and systematic error.
+     * @param supportsInertia   True, if motor is to be affected by inertia.
+     */
+    public DcMotorImpl(MotorType motorType, boolean supportsError, boolean supportsInertia){
+        MOTOR_TYPE = motorType;
+        this.supportsInertia = supportsInertia;
+        this.supportsError = supportsError;
     }
 
     /**
@@ -129,10 +143,20 @@ public class DcMotorImpl implements DcMotor {
     }
 
     /**
+     * For internal use only. Adjust internal position of motor. This can be called in order to simulate
+     * a stalled motor, by passing in negative of the last value returned by update(...).
+     * @param actualPositionAdjustment amount by which to increment (or decrement if negative) actualPosition
+     */
+    public synchronized  void adjustActualPosition(double actualPositionAdjustment){
+        actualPosition += actualPositionAdjustment;
+    }
+
+    /**
      * For internal use only.
      * @param rdmErrFrac
      */
     public synchronized void setRandomErrorFrac(double rdmErrFrac){
+        if (!supportsError) return;
         randomErrorFrac = rdmErrFrac;
     }
 
@@ -140,13 +164,16 @@ public class DcMotorImpl implements DcMotor {
      * For internal use only.
      * @param sysErrFrac
      */
-    public synchronized void setSystematicErrorFrac(double sysErrFrac) { systematicErrorFrac = sysErrFrac; }
+    public synchronized void setSystematicErrorFrac(double sysErrFrac) {
+        if (!supportsError) return;
+        systematicErrorFrac = sysErrFrac; }
 
     /**
      * For internal use only.
      * @param in
      */
     public synchronized void setInertia(double in){
+        if (!supportsInertia) return;
         if (in < 0) inertia = 0.0;
         else if (in > 0.99) inertia = 0.99;
         else inertia = in;

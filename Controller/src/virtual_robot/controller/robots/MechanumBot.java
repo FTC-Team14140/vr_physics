@@ -103,12 +103,12 @@ public class MechanumBot extends VirtualBot {
      */
     protected void createHardwareMap(){
         hardwareMap = new HardwareMap();
-        String[] motorNames = new String[] {"back_left_motor", "front_left_motor", "front_right_motor", "back_right_motor",
-                "arm_rotation_motor", "arm_extension_motor"};
-        for (String name: motorNames) hardwareMap.put(name, new DcMotorImpl(motorType));
+        String[] driveMotorNames = new String[] {"back_left_motor", "front_left_motor", "front_right_motor", "back_right_motor"};
+        for (String name: driveMotorNames) hardwareMap.put(name, new DcMotorImpl(motorType));
+        hardwareMap.put("arm_rotation_motor", new DcMotorImpl(motorType, false, false));
+        hardwareMap.put("arm_extension_motor", new DcMotorImpl(motorType, false, false));
         String[] distNames = new String[]{"front_distance", "left_distance", "back_distance", "right_distance"};
         for (String name: distNames) hardwareMap.put(name, controller.new DistanceSensorImpl());
-        //hardwareMap.put("gyro_sensor", controller.new GyroSensorImpl());
         hardwareMap.put("imu", new BNO055IMUImpl(this, 10));
         hardwareMap.put("color_sensor", controller.new ColorSensorImpl());
         hardwareMap.put("finger_servo", new ServoImpl());
@@ -174,7 +174,8 @@ public class MechanumBot extends VirtualBot {
                     y + halfBotWidth * Math.cos(sensorHeading), sensorHeading);
         }
 
-        double newArmRotation = armRotation + 0.05 * armRotationMotor.update(millis);
+        double deltaArmRotMotorTicks = armRotationMotor.update(millis);
+        double newArmRotation = armRotation + 0.05 * deltaArmRotMotorTicks;
         armRotation = Math.max(0, Math.min(90, newArmRotation));
         double newArmExtension = armExtension + 0.01 * armExtensionMotor.update(millis);
         armExtension = Math.max(0, Math.min(22, newArmExtension));
