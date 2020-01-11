@@ -52,9 +52,11 @@ public class MechanumBot extends VirtualBot {
     Translate foreArmTranslate = new Translate(0, 0, 0);
     Translate leftFingerTranslate = new Translate(0, 0, 0);
     Translate rightFingerTranslate = new Translate(0, 0, 0);
+    Rotate[] wheelRotates = new Rotate[] {new Rotate(0, Rotate.Y_AXIS), new Rotate(0, Rotate.Y_AXIS), new Rotate(0, Rotate.Y_AXIS), new Rotate(0, Rotate.Y_AXIS)};
 
     double armRotation = 0;
     double armExtension = 0;
+    double[] wheelRotations = new double[]{0,0,0,0};
 
     /**
      *  Overrides the init() method of VirtualBot. The override method must call super.init() as its first statement.
@@ -132,7 +134,12 @@ public class MechanumBot extends VirtualBot {
         for (int i = 0; i < 4; i++) {
             deltaPos[i] = motors[i].update(millis);
             w[i] = deltaPos[i] * wheelCircumference / motorType.TICKS_PER_ROTATION;
-            if (i < 2) w[i] = -w[i];
+            double wheelRotationDegrees = 360.0 * deltaPos[i] / motorType.TICKS_PER_ROTATION;
+            if (i < 2) {
+                w[i] = -w[i];
+                wheelRotationDegrees = -wheelRotationDegrees;
+            }
+            wheelRotations[i] += Math.min(17, Math.max(-17, wheelRotationDegrees));
         }
 
         double[] robotDeltaPos = new double[] {0,0,0,0};
@@ -208,6 +215,7 @@ public class MechanumBot extends VirtualBot {
             wheels[i].setRotate(90);
             wheels[i].setTranslateX(i<2? -8 : 8);
             wheels[i].setTranslateY(i==0 || i==3? -7 : 7);
+            wheels[i].getTransforms().add(wheelRotates[i]);
         }
 
         PhongMaterial armMaterial = new PhongMaterial(Color.FUCHSIA);
@@ -267,6 +275,9 @@ public class MechanumBot extends VirtualBot {
         double fingerMovement = fingerServo.getInternalPosition();
         leftFingerTranslate.setX(fingerMovement);
         rightFingerTranslate.setX(-fingerMovement);
+        for (int i=0; i<4; i++){
+            wheelRotates[i].setAngle(wheelRotations[i]);
+        }
     }
 
 
