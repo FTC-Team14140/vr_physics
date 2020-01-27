@@ -1,5 +1,7 @@
 # NEW:  3D Version of Virtual Robot
 
+![](/readme_image.jpg)
+
 **Some older hardware doesn't support Java FX 3D scenes.**  This runs on several circa 2015-16 Windows 10 and 8 systems
 we have tested on, but not on a 2008 laptop (which was originally Vista, now Windows 10). If your system does not
 support the 3D version, the original 2D version is available here: [virtual_robot](https://github.com/Beta8397/virtual_robot).
@@ -9,17 +11,18 @@ A 3D simulator to help beginning Java programmers learn to program for FTC Robot
 This is a JavaFX application developed using the (free) IntelliJ IDEA Community Edition IDE. The repository can be downloaded
 and unzipped, then opened with IntelliJ.
 
-Three robot configurations are available: a simple two-wheeled robot, a robot with four mechanum wheels, and an
-X-Drive robot with four OmniWheels mounted at 45 degrees at each corner of the robot.
+Four robot configurations are available, the first three of which are: a simple two-wheeled robot, a robot with
+four mechanum wheels, and an X-Drive robot with four OmniWheels mounted at 45 degrees at each corner of the robot.
+Each of these three robots has an rotating/extending arm attached to the back, controlled by DC motors. There is a
+grabber at the end of the arm that is controlled by a servo. The fourth robot configuration is "BetaBot". This
+is a mechanum-wheeled robot with a vertical lift, horizontal slider, and grabbing mechanism.
 
-Each robot can be thought of as 18 inches wide.  For the two-wheel bot and mecanum wheel bot, the distance between
-the centers of the right and left wheels is 16 inches. For the mecanum wheel bot, the distance between the centers
+Each robot can be thought of as 18 inches wide.  For the two-wheel bot and mecanum wheel bots, the distance between
+the centers of the right and left wheels is 16 inches. For the mecanum wheel bots, the distance between the centers
 of the front and back wheels is 14 inches, and the mecanum wheels (when viewed from the top) have an "X" configuration.
 For the X-Drive bot, the distance between the centers of any two adjacent wheels is 14.5 inches. Each motor has an
 encoder. There is a downward-facing color sensor in the center of the robot. A gyro sensor (or BNO055 imu) is also included.
-Each robot has an rotating/extending arm attached to the back, controlled by DC motors. There is a grabber at the
-end of the arm that is controlled by a servo. Each robot also has distance sensors on the front, left, right
-and back sides. Wheel diameters are all 4 inches.
+Each robot also has distance sensors on the front, left, right and back sides. Wheel diameters are all 4 inches.
 
 The field can be thought of as 12 feet wide. The field graphic (currently the Skystone field)
 is obtained from a bitmap (.bmp) image. The color sensor detects the field color beneath the center of the
