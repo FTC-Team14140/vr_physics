@@ -43,6 +43,7 @@ public class VirtualRobotApplication extends Application {
             controllerHandle.gamePadExecutorService.shutdownNow();
         }
         controllerHandle.gamePadHelper.quit();
+        controllerHandle.shutDownODE();
     }
 
     public static VirtualRobotController getControllerHandle(){return controllerHandle;}

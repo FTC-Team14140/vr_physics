@@ -25,7 +25,9 @@ import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.util.Callback;
+import odefx.FxBodyHelper;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.ode4j.ode.*;
 import org.reflections.Reflections;
 import util3d.Parts;
 import util3d.Util3D;
@@ -67,9 +69,27 @@ public class VirtualRobotController {
     @FXML private BorderPane borderPane;
     @FXML private GridPane cameraGrid;
 
+    //JavaFx subscene and the group that will hold all of the subscene content
     private SubScene subScene;
     private Group subSceneGroup;
 
+    //ODE world, space, and contact group for holding all of the DBody and DGeom objects
+    private DWorld world;
+    private DSpace space;
+    private DJointGroup contactGroup;
+
+    // fieldPlane is the DGeom that serves as the floor for collision purposes
+    DPlane fieldPlane;
+
+    //Callback object for collision detection; it just calls the nearCallback method.
+    private DGeom.DNearCallback nearCallback = new DGeom.DNearCallback() {
+        @Override
+        public void call(Object data, DGeom o1, DGeom o2) {
+            nearCallback(data, o1, o2);
+        }
+    };
+
+    //Used to follow mouse while dragging
     private double mouseX = 0;
     private double mouseY = 0;
 
@@ -136,7 +156,9 @@ public class VirtualRobotController {
     boolean getOpModeInitialized(){ return opModeInitialized; }
 
     public void initialize() {
+        setupODE();
         setUp3DSubScene();
+        createField();
         currentCameraButton = (Button)getNodeByGridPaneIndex(cameraGrid, 1, 1);
         OpMode.setVirtualRobotController(this);
         VirtualBot.setController(this);
@@ -865,6 +887,72 @@ public class VirtualRobotController {
     }
 
 
+    private void setupODE() {
+        //Set up world
+        OdeHelper.initODE2(0);
+        world = OdeHelper.createWorld();
+        space = OdeHelper.createHashSpace(null);
+        contactGroup = OdeHelper.createJointGroup();
+        world.setGravity(0, 0, -9.8);
+        world.setQuickStepNumIterations(12);
+    }
+
+    void shutDownODE(){
+        space.destroy();
+        world.destroy();
+        OdeHelper.closeODE();
+    }
+
+    /**
+     * Handles collisions by establishing attaching contact joints to bodies whose geometries have collided
+     * @param data
+     * @param o1
+     * @param o2
+     */
+    public void nearCallback(Object data, DGeom o1, DGeom o2){
+
+        assert(o1!=null);
+        assert(o2!=null);
+
+        if ( o1 instanceof DSpace || o2 instanceof DSpace )
+        {
+            /**
+             * If either geom is a space, recursively test the bodies within the spaces for collision
+             */
+            OdeHelper.spaceCollide2(o1,o2,data,nearCallback);
+            return;
+        }
+
+        /** If neither geom is a space, then test the two geoms against eachother for contact points
+         *  Then, for each detected contact, create a contact joint that has the desired properties
+         *  (e.g., bounciness and friction coefficient), and attach this joint to the two bodies. This
+         *  will apply forces to the bodies during the next ODE integration step.
+         */
+
+        final int N = 32;
+        DContactBuffer contacts = new DContactBuffer(N);
+        int n = OdeHelper.collide (o1,o2,N,contacts.getGeomBuffer());//[0].geom),sizeof(dContact));
+        if (n > 0)
+        {
+            for (int i=0; i<n; i++)
+            {
+                DContact contact = contacts.get(i);
+                contact.surface.mode = 0;      //Enable bounce
+                contact.surface.bounce = 0;
+                contact.surface.bounce_vel = 1.0;
+                contact.surface.mu = 0.5;
+                DJoint c = OdeHelper.createContactJoint (world,contactGroup,contact);
+                c.attach (contact.geom.g1.getBody(), contact.geom.g2.getBody());
+            }
+        }
+    }
+
+    /**
+     * Create and set up SubScene for 3D graphics. This includes creating SubScene, the subscene Group, setting up mouse
+     * handling, adding subscene to center of border pane, setting up camera and lighting.
+     *
+     * Addition of physics should not require this method to be modified.
+     */
     private void setUp3DSubScene(){
 
         subSceneGroup = new Group();
@@ -907,6 +995,28 @@ public class VirtualRobotController {
         camera.setFarClip(CAMERA_DISTANCE + HALF_FIELD_WIDTH*1.6);
         camera.setNearClip(CAMERA_DISTANCE - HALF_FIELD_WIDTH*1.6);
 
+        for (int i=0; i<3; i++) {
+            for (int j = 0; j < 3; j++) {
+                lightArray[i][j] = getLamp(72.0 * (j - 1), 72.0 * (1 - i), 36);
+                lightArray[i][j].setLightOn(false);
+            }
+        }
+
+        subSceneGroup.getChildren().add(new AmbientLight(Color.WHITE));
+
+        for (int i = 0; i < 3; i++) subSceneGroup.getChildren().addAll(lightArray[i]);
+
+        subSceneGroup.getChildren().add(camera);
+        subScene.setCamera(camera);
+
+
+    }
+
+    /**
+     * Create the playing field including floor, walls (if using), and any immobile elements (e.g., the bridge in
+     * SkyStone).
+     */
+    private void createField(){
 
         TriangleMesh fieldMesh = Util3D.getParametricMesh(-HALF_FIELD_WIDTH, HALF_FIELD_WIDTH,-HALF_FIELD_WIDTH, HALF_FIELD_WIDTH,
                 10, 10, false, false, new Util3D.Param3DEqn() {
@@ -931,25 +1041,14 @@ public class VirtualRobotController {
         fieldMaterial.setDiffuseMap(backgroundImage);
         fieldMaterial.setSelfIlluminationMap(backgroundImage);
         fieldView.setMaterial(fieldMaterial);
+        subSceneGroup.getChildren().add(fieldView);
 
-        subSceneGroup.getChildren().addAll(camera, fieldView);
+        fieldPlane = OdeHelper.createPlane(space, 0, 0, 1, 0);
 
         Group bridgeGroup = Parts.skyStoneBridge();
+        FxBodyHelper.dGeomsFromNode(bridgeGroup, space, null);
 
         subSceneGroup.getChildren().add(bridgeGroup);
-
-        for (int i=0; i<3; i++) {
-            for (int j = 0; j < 3; j++) {
-                lightArray[i][j] = getLamp(72.0 * (j - 1), 72.0 * (1 - i), 36);
-                lightArray[i][j].setLightOn(false);
-            }
-        }
-
-        subSceneGroup.getChildren().add(new AmbientLight(Color.WHITE));
-
-        for (int i = 0; i < 3; i++) subSceneGroup.getChildren().addAll(lightArray[i]);
-
-        subScene.setCamera(camera);
 
     }
 
