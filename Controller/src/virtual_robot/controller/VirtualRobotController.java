@@ -1046,7 +1046,11 @@ public class VirtualRobotController {
         fieldPlane = OdeHelper.createPlane(space, 0, 0, 1, 0);
 
         Group bridgeGroup = Parts.skyStoneBridge();
-        FxBodyHelper.dGeomsFromNode(bridgeGroup, space, null);
+        DSpace bridgeSpace = OdeHelper.createSimpleSpace();
+        FxBodyHelper.dGeomsFromNode(bridgeGroup, bridgeSpace, null);
+        DAABBC daabbc = bridgeSpace.getAABB();
+        System.out.printf("Bridge Group Bouding Box: xMin = %.1f  xMax = %.1f  yMin = %.1f  yMax = %.1f  zMin = %.1f  zMax = %.1f\n",
+                daabbc.getMin0(), daabbc.getMax0(), daabbc.getMin1(), daabbc.getMax1(), daabbc.getMin2(), daabbc.getMax2());
 
         subSceneGroup.getChildren().add(bridgeGroup);
 

@@ -17,6 +17,8 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import org.ode4j.ode.DGeom;
+import org.ode4j.ode.DSpace;
 import virtual_robot.config.Config;
 
 /**
@@ -51,9 +53,7 @@ public abstract class VirtualBot {
     protected double halfBotWidth;
     protected double botWidth;
 
-    protected double x = 0;
-    protected double y = 0;
-    protected double headingRadians = 0;
+    protected DSpace space;
 
     public VirtualBot(){
         subSceneGroup = controller.getSubSceneGroup();
@@ -87,13 +87,7 @@ public abstract class VirtualBot {
 
         displayGroup = getDisplayGroup();
 
-        /*
-          Add transforms. They will be applied in the opposite order from the order in which they are added.
-          The scale transform scales the entire display group so that the base layer has the same width as the field,
-          and the chassis rectangle (originally the 75x75 rectangle) is one-eight of the field width.
-          The rotate and translate transforms are added so that they can be manipulated later, when the robot moves
-          around the field.
-         */
+
         displayGroup.getTransforms().add(new Translate(0, 0));
         displayGroup.getTransforms().add(new Rotate(0, 0, 0));
 
@@ -101,8 +95,27 @@ public abstract class VirtualBot {
     }
 
     /**
-     *  Update the state of the robot. This includes the x, y, and headingRadians variables, as well other variables
-     *  that may need to be updated for a specific robot configuration.
+     * Return the bot's DSpace object.
+     * This will be used from the controller for bot-bot and bot-other collide handling.
+     * @return
+     */
+    public DSpace getSpace(){
+        return space;
+    }
+
+    /**
+     * Return the bot's DNearCallback object.
+     * This will be used by the controller for bot-bot and bot-other collide handling.
+     * @return
+     */
+    public abstract DGeom.DNearCallback getDNearCallback();
+
+
+
+    /**
+     *  Update the state of the robot. This includes updating forces and torques on DBody objects of the robot,
+     *  as well as updating joint limits and motor-joint speeds. It will not directly update positions and angles,
+     *  as that will be handled by the physics engine.
      *
      *  Also, update the robot's sensors by calling the update.. methods of the sensors (e.g., the
      *  updateDistance(...) method of the distance sensors).
@@ -116,50 +129,51 @@ public abstract class VirtualBot {
     public abstract void updateStateAndSensors(double millis);
 
     /**
-     *  Update the display based on the current x, y, and headingRadians of the robot.
-     *  This method is run on the UI thread via a call to Platform.runLater(...).
+     * Reposition the bot on the field. This is not for use during active simulation. It is to be used to position the
+     * bot before starting the simulation. Note: this is a 2D function. The implementation should position the bot
+     * horizontally, with wheels on floor.
      *
-     *  For most robot configurations, it will be necessary to override this method, so as to
-     *  implement graphical behavior that is specific to an individual robot configuration.
-     *
-     *  When overriding updateDisplay(), the first statement of the override method should
-     *  be: super.updateDisplay().
-     *
+     * @param x
+     * @param y
+     * @param theta
      */
-    public synchronized void updateDisplay(){
-        double displayX = x;
-        double displayY = y;
-        double displayAngle = headingRadians * 180.0 / Math.PI;
-        Translate translate = (Translate)displayGroup.getTransforms().get(0);
-        translate.setX(displayX);
-        translate.setY(displayY);
-        ((Rotate)displayGroup.getTransforms().get(1)).setAngle(displayAngle);
-    }
+    public abstract void setPosition(double x, double y, double theta);
+
+    /**
+     * Get bot's current 2D position (x, y, theta) on the field
+     * @return
+     */
+    public abstract double[] getPosition();
+
+    /**
+     * Update bot display based on the current state of its FxBody objects.
+     *
+     * This must be called from the main application thread, via a Platform.runLater call if needed.
+     */
+    public abstract void updateDisplay();
 
     /**
      * Stop all motors; De-initialize or close other hardware (e.g. gyro/IMU) as appropriate.
      */
     public abstract void powerDownAndReset();
 
-    public double getHeadingRadians(){ return headingRadians; }
-
     public void positionWithMouseClick(MouseEvent arg){
+        double[] pos = getPosition(); //x, y, headingRadians
         if (arg.getButton() == MouseButton.PRIMARY) {
             double argX = Math.min(halfFieldWidth-halfBotWidth,
                     Math.max((arg.getX()- Config.SUBSCENE_WIDTH/2.0)*fieldWidth/Config.SUBSCENE_WIDTH, -(halfFieldWidth-halfBotWidth)));
             double argY = Math.min(halfFieldWidth-halfBotWidth,
                     Math.max(-(arg.getY()- Config.SUBSCENE_WIDTH/2.0)*fieldWidth/Config.SUBSCENE_WIDTH, -(halfFieldWidth-halfBotWidth)));
-            x = argX;
-            y = argY;
+            setPosition(argX, argY, pos[2]);
             updateDisplay();
         }
         else if (arg.getButton() == MouseButton.SECONDARY){
             double clickX = (arg.getX() - Config.SUBSCENE_WIDTH/2.0) * fieldWidth/Config.SUBSCENE_WIDTH;
             double clickY = (Config.SUBSCENE_WIDTH/2.0 - arg.getY()) * fieldWidth/Config.SUBSCENE_WIDTH;
-            double radians = Math.atan2(clickY - y, clickX - x) - Math.PI/2.0;
+            double radians = Math.atan2(clickY - pos[1], clickX - pos[0]) - Math.PI/2.0;
             if (radians > Math.PI) radians -= 2.0*Math.PI;
             else if (radians < -Math.PI) radians += 2.0 * Math.PI;
-            headingRadians = radians;
+            setPosition(pos[0], pos[1], radians);
             updateDisplay();
         }
     }

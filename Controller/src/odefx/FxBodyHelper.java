@@ -76,6 +76,7 @@ public class FxBodyHelper {
             }
         } else if (node instanceof Shape3D){
             DGeom dGeom = dGeomFromShape3D((Shape3D)node, space);
+            if (node.getId() != null && node.getId() != "") dGeom.setData(node.getId());
             if (node instanceof Cylinder) {
                 transform = transform.createConcatenation(new Rotate(90, new Point3D(1, 0, 0)));
             }

@@ -9,6 +9,8 @@ import javafx.scene.transform.Translate;
 import org.ode4j.math.*;
 import org.ode4j.ode.*;
 
+import java.util.HashMap;
+
 /**
  * Attempting to encapsulate an ODE4J DGeom (possibly attached to a DBody) along with a JavaFX Shape3D or Group,
  * with convenience methods to create such objects and to update display.
@@ -20,6 +22,8 @@ public class FxBody {
     private Node node = null;
 
     private DSpace dSpace = null;
+
+    private HashMap<String, DGeom> geoms = new HashMap<>();
 
     public DBody getBody(){
         return dBody;
@@ -113,6 +117,59 @@ public class FxBody {
     public void addGeom(DGeom dGeom){
         dGeom.setBody(dBody);
         if (dSpace != null) dSpace.add(dGeom);
+        if (dGeom.getData() != null && dGeom.getData() instanceof String) geoms.put((String)dGeom.getData(), dGeom);
+    }
+
+    /**
+     * Return dGeom whose "key" is name. Note not all geoms will necessarily have a key.
+     * @param name
+     * @return
+     */
+    public DGeom getGeom(String name){
+        return geoms.get(name);
+    }
+
+    /**
+     * Set category bits to the same value for all geoms belonging to this FxBody
+     * @param bits
+     */
+    public void setCategoryBits(long bits){
+        DGeom dGeom = dBody.getFirstGeom();
+        while (dGeom != null) {
+            dGeom.setCategoryBits(bits);
+            dGeom = dBody.getNextGeom(dGeom);
+        }
+    }
+
+    /**
+     * Set collide bits to the same value for all geoms belonging to this FxBody
+     * @param bits
+     */
+    public void setCollideBits(long bits){
+        DGeom dGeom = dBody.getFirstGeom();
+        while (dGeom != null) {
+            dGeom.setCollideBits(bits);
+            dGeom = dBody.getNextGeom(dGeom);
+        }
+    }
+
+
+    /**
+     * Set category bits for a single geom. If there is no geom with the provided ID, an exception will result
+     * @param geomId
+     * @param bits
+     */
+    public void setCategoryBits(String geomId, long bits){
+        geoms.get(geomId).setCategoryBits(bits);
+    }
+
+    /**
+     * Set collide bits for a single geom. If there is no geom with the provided ID, an exception will result
+     * @param geomId
+     * @param bits
+     */
+    public void setCollideBits(String geomId, long bits){
+        geoms.get(geomId).setCollideBits(bits);
     }
 
 
