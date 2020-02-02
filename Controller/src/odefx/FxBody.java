@@ -9,7 +9,9 @@ import javafx.scene.transform.Translate;
 import org.ode4j.math.*;
 import org.ode4j.ode.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Attempting to encapsulate an ODE4J DGeom (possibly attached to a DBody) along with a JavaFX Shape3D or Group,
@@ -24,6 +26,13 @@ public class FxBody {
     private DSpace dSpace = null;
 
     private HashMap<String, DGeom> geoms = new HashMap<>();
+
+    /**
+     * The purpose of children is to allow a group of bodies to be repositioned together, maintaining their
+     * original spatial relationships. The only methods that use the children of the FxBody are
+     * getChildren(), setPosition(), setRotation(), setQuaternion(), and updateNodeDisplay().
+     */
+    private List<FxBody> children = new ArrayList<>();
 
     public DBody getBody(){
         return dBody;
@@ -49,6 +58,8 @@ public class FxBody {
         DBody dBody = OdeHelper.createBody(world);
         return new FxBody(dBody, space);
     };
+
+    public List<FxBody> getChildren() { return children;}
 
     /**
      * Get the JavaFx Node (should be either a Group or Shape3D) associated with this FxBody
@@ -198,7 +209,7 @@ public class FxBody {
      * This method should only be called from the Application Thread. This can be accomplished by
      * wrapping the call in a call to Platform.runLater.
      */
-    public void updateNodeDisplay(){
+    public void updateNodeDisplay(boolean updateChildDisplay){
         if (node == null) return;
         ObservableList<Transform> transforms = node.getTransforms();
         if (transforms.size() < 2) return;
@@ -220,6 +231,12 @@ public class FxBody {
         ((Translate)transforms.get(0)).setX(pos.get0());
         ((Translate)transforms.get(0)).setY(pos.get1());
         ((Translate)transforms.get(0)).setZ(pos.get2());
+
+        if (updateChildDisplay){
+            for (FxBody child: children){
+                updateNodeDisplay(true);
+            }
+        }
     }
 
     /**
@@ -228,9 +245,15 @@ public class FxBody {
      * @param y
      * @param z
      */
-    public void setPosition(double x, double y, double z) {
+    public void setPosition(double x, double y, double z, boolean setChildPos) {
+        DVector3C oldPos = getPosition();
         dBody.setPosition(x, y, z);
-        updateNodeDisplay();
+        if (setChildPos) {
+            for (FxBody child : children) {
+                child.setPosition(((DVector3)child.getPosition()).reAdd(getPosition()).reSub(oldPos), true);
+            }
+        }
+        updateNodeDisplay(setChildPos);
     }
 
 
@@ -238,9 +261,15 @@ public class FxBody {
      * Set the position of the DBody, and automatically update display. Call only from the application thread.
      * @param p
      */
-    public void setPosition(DVector3C p) {
+    public void setPosition(DVector3C p, boolean setChildPos) {
+        DVector3C oldPos = getPosition();
         dBody.setPosition(p);
-        updateNodeDisplay();
+        if (setChildPos) {
+            for (FxBody child : children) {
+                child.setPosition(((DVector3)child.getPosition()).reAdd(getPosition()).reSub(oldPos), true);
+            }
+        }
+        updateNodeDisplay(setChildPos);
     }
 
 
@@ -248,9 +277,25 @@ public class FxBody {
      * Set the Rotation of the DBody, and automatically update display. Call only from the application thread.
      * @param R
      */
-    public void setRotation(DMatrix3C R) {
+    public void setRotation(DMatrix3C R, boolean setChildRot) {
+        DMatrix3C oldRot = getRotation();
         dBody.setRotation(R);
-        updateNodeDisplay();
+        if (setChildRot){
+            DMatrix3 invOldRot = new DMatrix3();
+            if (!DMatrix.dInvertPDMatrix(oldRot, invOldRot)) System.out.println("Matrix inversion failed");
+            for (FxBody child: children){
+                DMatrix3 newRotTimesInvOldRot = new DMatrix3();
+                DMatrix.dMultiply0(newRotTimesInvOldRot, R, invOldRot);
+                DMatrix3 newChildRot = new DMatrix3();
+                DMatrix.dMultiply0(newChildRot, newRotTimesInvOldRot, child.getRotation());
+                DVector3 newChildPos = new DVector3();
+                DMatrix.dMultiply0(newChildPos, newRotTimesInvOldRot, child.getPosition().reSub(getPosition()));
+                newChildPos.add(getPosition());
+                child.setPosition(newChildPos, true);
+                child.setRotation(newChildRot, true);
+            }
+        }
+        updateNodeDisplay(setChildRot);
     }
 
 
@@ -258,9 +303,27 @@ public class FxBody {
      * Set the Quaternion of the DBody, and automatically update display. Call only from the application thread.
      * @param q
      */
-    public void setQuaternion(DQuaternionC q) {
+    public void setQuaternion(DQuaternionC q, boolean setChildRot) {
+        DMatrix3C oldRot = getRotation();
         dBody.setQuaternion(q);
-        updateNodeDisplay();
+        if (setChildRot){
+            DMatrix3 invOldRot = new DMatrix3();
+            if (!DMatrix.dInvertPDMatrix(oldRot, invOldRot)) System.out.println("Matrix inversion failed");
+            for (FxBody child: children){
+                DMatrix3 newRot = new DMatrix3();
+                DRotation.dRfromQ(newRot, q);
+                DMatrix3 RotNewTimesInvOldRot = new DMatrix3();
+                DMatrix.dMultiply0(RotNewTimesInvOldRot, newRot, invOldRot);
+                DMatrix3 newChildRot = new DMatrix3();
+                DMatrix.dMultiply0(newChildRot, RotNewTimesInvOldRot, child.getRotation());
+                DVector3 newChildPos = new DVector3();
+                DMatrix.dMultiply0(newChildPos, RotNewTimesInvOldRot, child.getPosition().reSub(getPosition()));
+                newChildPos.add(getPosition());
+                child.setPosition(newChildPos, true);
+                child.setRotation(newChildRot, true);
+            }
+        }
+        updateNodeDisplay(setChildRot);
     }
 
     public void setData(Object data) {
