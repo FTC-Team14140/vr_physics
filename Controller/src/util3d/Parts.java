@@ -29,62 +29,67 @@ public class Parts {
         PhongMaterial tetrixMaterial = Util3D.imageMaterial("/virtual_robot/assets/tetrix.jpg");
         return Util3D.patternBox(length, height, depth, patternWidth, patternWidth, patternWidth, tetrixMaterial);
     }
-    
+
+    /**
+     *  Create Skystone bridge assembly node
+     *  Dimensions now in meters.
+     * @return
+     */
     public static Group skyStoneBridge(){
         Group group = new Group();
 
         PhongMaterial blueBridgeMaterial = new PhongMaterial(Color.BLUE);
-        Cylinder blueBridge1 = new Cylinder(0.5, 50);
+        Cylinder blueBridge1 = new Cylinder(0.0127, 1.27);
         blueBridge1.setMaterial(blueBridgeMaterial);
         blueBridge1.getTransforms().addAll(
-                new Translate(-VirtualRobotController.HALF_FIELD_WIDTH+24, 3.0, 14.5),
+                new Translate(-VirtualRobotController.HALF_FIELD_WIDTH+0.6096, 0.0762, 0.3683),
                 new Rotate(90, Rotate.Z_AXIS)
         );
-        Cylinder blueBridge2 = new Cylinder(0.5, 50);
+        Cylinder blueBridge2 = new Cylinder(0.0127, 1.27);
         blueBridge2.setMaterial(blueBridgeMaterial);
         blueBridge2.getTransforms().addAll(
-                new Translate(-VirtualRobotController.HALF_FIELD_WIDTH+24, -3.0, 14.5),
+                new Translate(-VirtualRobotController.HALF_FIELD_WIDTH+0.6096, -0.0762, 0.3683),
                 new Rotate(90, Rotate.Z_AXIS)
         );
         PhongMaterial redBridgeMaterial = new PhongMaterial(Color.RED);
-        Cylinder redBridge1 = new Cylinder(0.5, 50);
+        Cylinder redBridge1 = new Cylinder(0.0127, 1.27);
         redBridge1.setMaterial(redBridgeMaterial);
         redBridge1.getTransforms().addAll(
-                new Translate(VirtualRobotController.HALF_FIELD_WIDTH-24, 3.0, 14.5),
+                new Translate(VirtualRobotController.HALF_FIELD_WIDTH-0.6096, 0.0762, 0.3683),
                 new Rotate(90, Rotate.Z_AXIS)
         );
-        Cylinder redBridge2 = new Cylinder(0.5, 50);
+        Cylinder redBridge2 = new Cylinder(0.0127, 1.27);
         redBridge2.setMaterial(redBridgeMaterial);
         redBridge2.getTransforms().addAll(
-                new Translate(VirtualRobotController.HALF_FIELD_WIDTH-24, -3.0, 14.5),
+                new Translate(VirtualRobotController.HALF_FIELD_WIDTH-0.6096, -0.0762, 0.3683),
                 new Rotate(90, Rotate.Z_AXIS)
         );
         PhongMaterial neutralBridgeMaterial = new PhongMaterial(Color.ORANGE);
-        Cylinder neutralBridge1 = new Cylinder(0.5, 47);
+        Cylinder neutralBridge1 = new Cylinder(0.0127, 1.1938);
         neutralBridge1.setMaterial(neutralBridgeMaterial);
         neutralBridge1.getTransforms().addAll(
-                new Translate(0, 3.0, 20.5),
+                new Translate(0, 0.0762, 0.5207),
                 new Rotate(90, Rotate.Z_AXIS)
         );
         Cylinder neutralBridge2 = new Cylinder(0.5, 47);
         neutralBridge2.setMaterial(neutralBridgeMaterial);
         neutralBridge2.getTransforms().addAll(
-                new Translate(0, -3.0, 20.5),
+                new Translate(0, -0.0762, 0.5207),
                 new Rotate(90, Rotate.Z_AXIS)
         );
         PhongMaterial bridgeStandMaterial = new PhongMaterial(Color.CORNSILK);
-        Box bridgeStand1 = new Box(1, 8, 16);
+        Box bridgeStand1 = new Box(0.0254, 0.2032, 0.4064);
         bridgeStand1.setMaterial(bridgeStandMaterial);
-        bridgeStand1.getTransforms().add(new Translate(-VirtualRobotController.HALF_FIELD_WIDTH-0.5, 0, 8));
-        Box bridgeStand2 = new Box(1, 8, 22);
+        bridgeStand1.getTransforms().add(new Translate(-VirtualRobotController.HALF_FIELD_WIDTH-0.0127, 0, 0.2032));
+        Box bridgeStand2 = new Box(0.0254, 0.2032, 0.5588);
         bridgeStand2.setMaterial(bridgeStandMaterial);
-        bridgeStand2.getTransforms().add(new Translate(-23, 0, 11));
-        Box bridgeStand3 = new Box(1, 8, 22);
+        bridgeStand2.getTransforms().add(new Translate(-0.5842, 0, 0.2794));
+        Box bridgeStand3 = new Box(0.0254, 0.2032, 0.5588);
         bridgeStand3.setMaterial(bridgeStandMaterial);
-        bridgeStand3.getTransforms().add(new Translate(23, 0, 11));
-        Box bridgeStand4 = new Box(1, 8, 16);
+        bridgeStand3.getTransforms().add(new Translate(0.5842, 0, 0.2794));
+        Box bridgeStand4 = new Box(0.0254, 0.2032, 0.4064);
         bridgeStand4.setMaterial(bridgeStandMaterial);
-        bridgeStand4.getTransforms().add(new Translate(VirtualRobotController.HALF_FIELD_WIDTH+0.5, 0, 8));
+        bridgeStand4.getTransforms().add(new Translate(VirtualRobotController.HALF_FIELD_WIDTH+0.0127, 0, 0.2032));
 
         group.getChildren().addAll(blueBridge1, blueBridge2, redBridge1, redBridge2, neutralBridge1, neutralBridge2,
                 bridgeStand1, bridgeStand2, bridgeStand3, bridgeStand4);

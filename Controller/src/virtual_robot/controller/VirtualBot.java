@@ -17,7 +17,13 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import odefx.FxBody;
+import org.ode4j.math.DMatrix3;
+import org.ode4j.math.DMatrix3C;
+import org.ode4j.math.DVector3;
+import org.ode4j.math.DVector3C;
 import org.ode4j.ode.DGeom;
+import org.ode4j.ode.DRotation;
 import org.ode4j.ode.DSpace;
 import virtual_robot.config.Config;
 
@@ -47,7 +53,12 @@ public abstract class VirtualBot {
 
     protected Group displayGroup = null;
 
-    protected Group subSceneGroup;
+    protected Group subSceneGroup = null;
+
+    protected FxBody fxBody = null;
+
+    protected double zBase = 0;
+
     protected double fieldWidth;
     protected double halfFieldWidth;
     protected double halfBotWidth;
@@ -65,7 +76,8 @@ public abstract class VirtualBot {
 
     public void init(){
         createHardwareMap();
-        setUpDisplayGroup();
+        setUpFxBody();
+        zBase = fxBody.getPosition().get2();
     }
 
     static void setController(VirtualRobotController ctrl){
@@ -73,26 +85,13 @@ public abstract class VirtualBot {
     }
 
     /**
-     * Get the display group from the concrete robot class
-     */
-    protected abstract Group getDisplayGroup();
-
-    /**
-     * Set up the Group object that will be displayed as the virtual robot. The resource file should contain
-     * a Group with a 75x75 rectangle (The chassis rectangle) as its lowest layer, and other robot components
-     * on top of that rectangle.
+     * Create the FxBody object that represents the robot. The DBody object belonging to this object should be the
+     * robot chassis. The children should be additional FxBody objects representing other potentially-moving
+     * robot parts. Immediately after creation, the FxBody should be positioned at (0, 0, zBase), where zBase
+     * is the z-value that rests the wheels on the floor.
      *
      */
-    protected void setUpDisplayGroup(){
-
-        displayGroup = getDisplayGroup();
-
-
-        displayGroup.getTransforms().add(new Translate(0, 0));
-        displayGroup.getTransforms().add(new Rotate(0, 0, 0));
-
-        subSceneGroup.getChildren().add(displayGroup);
-    }
+    protected abstract void setUpFxBody();
 
     /**
      * Return the bot's DSpace object.
@@ -108,7 +107,7 @@ public abstract class VirtualBot {
      * This will be used by the controller for bot-bot and bot-other collide handling.
      * @return
      */
-    public abstract DGeom.DNearCallback getDNearCallback();
+    public abstract DGeom.DNearCallback getNearCallback();
 
 
 
@@ -117,46 +116,69 @@ public abstract class VirtualBot {
      *  as well as updating joint limits and motor-joint speeds. It will not directly update positions and angles,
      *  as that will be handled by the physics engine.
      *
-     *  Also, update the robot's sensors by calling the update.. methods of the sensors (e.g., the
-     *  updateDistance(...) method of the distance sensors).
-     *
-     *  updateStateAndSensors is called on a non-UI thread via an ExecutorService object. For that reason,
+     *  updateState is called on a non-UI thread via an ExecutorService object. For that reason,
      *  it SHOULD NOT make changes to the robot's graphical UI. Those changes should be made by
      *  overriding the updateDisplay() method, which is run on the UI thread.
      *
      *  @param millis milliseconds since the previous update
      */
-    public abstract void updateStateAndSensors(double millis);
+    public abstract void updateState(double millis);
+
+    /**
+     * Update robot sensors base on its current position and orientation.
+     * updateSensors is called on a non-UI thread via an ExecutorService object. For that reason,
+     * it SHOULD NOT make changes to the robot's graphical UI. Those changes should be made by
+     * overriding the updateDisplay() method, which is run on the UI thread.
+     */
+    public abstract void updateSensors();
 
     /**
      * Reposition the bot on the field. This is not for use during active simulation. It is to be used to position the
-     * bot before starting the simulation. Note: this is a 2D function. The implementation should position the bot
-     * horizontally, with wheels on floor.
+     * bot before starting the simulation. Note: this is a 2D function. It will. NOTE: this updates the display (via
+     * calls to fxBody.setPosition and fxBody.setRotation), so it should only be called from the application thread.
      *
      * @param x
      * @param y
      * @param theta
      */
-    public abstract void setPosition(double x, double y, double theta);
+    public void setPosition(double x, double y, double theta){
+        x = Math.max(-halfFieldWidth+halfBotWidth, Math.min(x, halfFieldWidth-halfBotWidth));
+        y = Math.max(-halfFieldWidth+halfBotWidth, Math.min(y, halfFieldWidth-halfBotWidth));
+        DMatrix3 R = new DMatrix3();
+        DRotation.dRFromAxisAndAngle(R, 0, 0, 1, theta);
+        fxBody.setPosition(x, y, zBase);
+        fxBody.setRotation(R);
+    }
 
     /**
      * Get bot's current 2D position (x, y, theta) on the field
-     * @return
+     * @return x, y, theta
      */
-    public abstract double[] getPosition();
+    public double[] getPosition(){
+        DVector3C pos = fxBody.getPosition();
+        DMatrix3C rot = fxBody.getRotation();
+        double theta = Math.atan2( rot.get10(), rot.get00());
+        return new double[] {pos.get0(), pos.get1(), theta};
+    }
 
     /**
      * Update bot display based on the current state of its FxBody objects.
      *
      * This must be called from the main application thread, via a Platform.runLater call if needed.
      */
-    public abstract void updateDisplay();
+    public void updateDisplay(){
+        fxBody.updateNodeDisplay();
+    }
 
     /**
      * Stop all motors; De-initialize or close other hardware (e.g. gyro/IMU) as appropriate.
      */
     public abstract void powerDownAndReset();
 
+    /**
+     * Position bot on field base on MouseEvent argument
+     * @param arg
+     */
     public void positionWithMouseClick(MouseEvent arg){
         double[] pos = getPosition(); //x, y, headingRadians
         if (arg.getButton() == MouseButton.PRIMARY) {
@@ -165,7 +187,6 @@ public abstract class VirtualBot {
             double argY = Math.min(halfFieldWidth-halfBotWidth,
                     Math.max(-(arg.getY()- Config.SUBSCENE_WIDTH/2.0)*fieldWidth/Config.SUBSCENE_WIDTH, -(halfFieldWidth-halfBotWidth)));
             setPosition(argX, argY, pos[2]);
-            updateDisplay();
         }
         else if (arg.getButton() == MouseButton.SECONDARY){
             double clickX = (arg.getX() - Config.SUBSCENE_WIDTH/2.0) * fieldWidth/Config.SUBSCENE_WIDTH;
@@ -174,12 +195,17 @@ public abstract class VirtualBot {
             if (radians > Math.PI) radians -= 2.0*Math.PI;
             else if (radians < -Math.PI) radians += 2.0 * Math.PI;
             setPosition(pos[0], pos[1], radians);
-            updateDisplay();
         }
     }
 
+    /**
+     * Not sure if this will be used.
+     */
     public void removeFromDisplay(){
-        subSceneGroup.getChildren().remove(displayGroup);
+        subSceneGroup.getChildren().remove(fxBody.getNode());
+        for (FxBody fxChild: fxBody.getChildren()){
+            subSceneGroup.getChildren().remove(fxChild.getNode());
+        }
     }
 
     public HardwareMap getHardwareMap(){ return hardwareMap; }

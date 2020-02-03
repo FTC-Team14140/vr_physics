@@ -8,7 +8,14 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
+import odefx.FxBody;
+import org.firstinspires.ftc.robotcore.external.matrices.GeneralMatrixF;
+import org.firstinspires.ftc.robotcore.external.matrices.MatrixF;
+import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
+import org.ode4j.math.*;
+import org.ode4j.ode.*;
 import util3d.Parts;
 import util3d.Util3D;
 import virtual_robot.controller.BotConfig;
@@ -22,6 +29,13 @@ import virtual_robot.util.AngleUtils;
  */
 @BotConfig(name = "Beta Bot")
 public class BetaBot extends VirtualBot {
+
+    private final float TOTAL_MASS = 15;  //kg
+    private final float TOTAL_Z_INERTIA = 0.5f; //kg*m2
+    private final float FIELD_FRICTION_COEFF = 1.0f;
+    private final float GRAVITY = 9.8f; // m/s2
+    //Max possible force (in Robot-X direction) at any wheel (each wheel gets 1/4 of robot weight)
+    private final float MAX_WHEEL_X_FORCE = TOTAL_MASS * GRAVITY * FIELD_FRICTION_COEFF / (4.0f * (float)Math.sqrt(2));
 
     public final MotorType motorType = MotorType.Neverest40;
     private DcMotorImpl[] motors = null;
@@ -39,6 +53,9 @@ public class BetaBot extends VirtualBot {
 
     private double[][] tWR; //Transform from wheel motion to robot motion
 
+    GeneralMatrixF  M_ForceWheelToRobot;
+    MatrixF M_ForceRobotToWheel;
+
     Rotate handRotate = new Rotate(0, 0, 0, 2.5, new Point3D(0,1,0));
     Translate sliderTranslate = new Translate(0, 0, 0);
     Translate[] liftTranslates = new Translate[]{new Translate(0, 0, 0), new Translate(0, 0, 0), new Translate(0, 0, 0)};
@@ -48,6 +65,15 @@ public class BetaBot extends VirtualBot {
     double sliderTranslation = 0;
     double liftElevation = 0;
     double[] wheelRotations = new double[]{0,0,0,0};
+
+    private DGeom.DNearCallback dNearCallback = new DGeom.DNearCallback() {
+        @Override
+        public void call(Object data, DGeom o1, DGeom o2) {
+            nearCallback(data, o1, o2);
+        }
+    };
+
+    public DGeom.DNearCallback getNearCallback() { return dNearCallback; }
 
     @Override
     public void init(){
@@ -82,6 +108,16 @@ public class BetaBot extends VirtualBot {
                 {-0.25/ wlAverage, -0.25/ wlAverage, 0.25/ wlAverage, 0.25/ wlAverage},
                 {-0.25, 0.25, 0.25, -0.25}
         };
+
+        float RRt2 = 0.5f * (float)Math.sqrt(interWheelLength*interWheelLength + interWheelWidth*interWheelWidth) * (float)Math.sqrt(2.0);
+        M_ForceWheelToRobot = new GeneralMatrixF(4, 4, new float[]{
+                1, 1, 1, 1,
+                -1, 1, -1, 1,
+                RRt2, -RRt2, -RRt2, RRt2,
+                1, 1, -1, -1});
+
+        M_ForceRobotToWheel = M_ForceWheelToRobot.inverted();
+
     }
 
     protected void createHardwareMap(){
@@ -97,15 +133,41 @@ public class BetaBot extends VirtualBot {
         hardwareMap.put("slider_crservo", new CRServoImpl(720));
     }
 
-    public synchronized void updateStateAndSensors(double millis){
+    public synchronized void updateSensors(){
 
-        double[] deltaPos = new double[4];
+        //Get current bot position and orientation
+        DMatrix3C currentRot = fxBody.getRotation();
+        double headingRadians = Math.atan2(currentRot.get10(), currentRot.get00());
+        DVector3C currentPos = fxBody.getPosition();
+        double x = currentPos.get0();
+        double y = currentPos.get1();
+
+        //Based on current bot position and orientation, update sensors
+        imu.updateHeadingRadians(headingRadians);
+
+        colorSensor.updateColor(x, y);
+
+        final double piOver2 = Math.PI / 2.0;
+
+        for (int i = 0; i<4; i++){
+            double sensorHeading = AngleUtils.normalizeRadians(headingRadians + i * piOver2);
+            distanceSensors[i].updateDistance( x - halfBotWidth * Math.sin(sensorHeading),
+                    y + halfBotWidth * Math.cos(sensorHeading), sensorHeading);
+        }
+
+    }
+
+    public synchronized void updateState(double millis){
+
+        //Based on KINEMATIC model, determine expected changes in X,Y,THETA during next interval
+
+        double[] deltaTicks = new double[4];
         double[] w = new double[4];
 
         for (int i = 0; i < 4; i++) {
-            deltaPos[i] = motors[i].update(millis);
-            w[i] = deltaPos[i] * wheelCircumference / motorType.TICKS_PER_ROTATION;
-            double wheelRotationDegrees = 360.0 * deltaPos[i] / motorType.TICKS_PER_ROTATION;
+            deltaTicks[i] = motors[i].update(millis);
+            w[i] = deltaTicks[i] * wheelCircumference / motorType.TICKS_PER_ROTATION;
+            double wheelRotationDegrees = 360.0 * deltaTicks[i] / motorType.TICKS_PER_ROTATION;
             if (i < 2) {
                 w[i] = -w[i];
                 wheelRotationDegrees = -wheelRotationDegrees;
@@ -122,35 +184,65 @@ public class BetaBot extends VirtualBot {
 
         double dxR = robotDeltaPos[0];
         double dyR = robotDeltaPos[1];
-        double headingChange = robotDeltaPos[2];
-        double avgHeading = headingRadians + headingChange / 2.0;
+        double dHeading = robotDeltaPos[2];
+        DMatrix3C currentRot = fxBody.getRotation();
+        double heading = Math.atan2(currentRot.get10(), currentRot.get00());
+        double avgHeading = heading + dHeading / 2.0;
+        double sinAvg = Math.sin(avgHeading);
+        double cosAvg = Math.cos(avgHeading);
+        double dX = dxR * cosAvg - dyR * sinAvg;
+        double dY = dxR * sinAvg + dyR * cosAvg;
 
-        double sin = Math.sin(avgHeading);
-        double cos = Math.cos(avgHeading);
+        //Determine the force and torque (WORLD COORDS) that would be required to achieve the changes predicted by
+        //the kinematic model.
 
-        x += dxR * cos - dyR * sin;
-        y += dxR * sin + dyR * cos;
-        headingRadians += headingChange;
+        double t = millis / 1000.0;
+        double tSqr = t * t;
+        DVector3 deltaPos = new DVector3(dX, dY, 0);
+        DVector3C vel = fxBody.getLinearVel();
+        ((DVector3)vel).set2(0);
+        DVector3 force = deltaPos.reSub(vel.reScale(t)).reScale(2.0 * TOTAL_MASS / tSqr);
+        double angVel = fxBody.getAngularVel().get2();
+        float torque = (float)(2.0 * TOTAL_Z_INERTIA * (dHeading - angVel*t)/tSqr);
 
-        if (x >  (halfFieldWidth - halfBotWidth)) x = halfFieldWidth - halfBotWidth;
-        else if (x < (halfBotWidth - halfFieldWidth)) x = halfBotWidth - halfFieldWidth;
-        if (y > (halfFieldWidth - halfBotWidth)) y = halfFieldWidth - halfBotWidth;
-        else if (y < (halfBotWidth - halfFieldWidth)) y = halfBotWidth - halfFieldWidth;
+        //Convert the force to the ROBOT COORDINATE system
 
-        if (headingRadians > Math.PI) headingRadians -= 2.0 * Math.PI;
-        else if (headingRadians < -Math.PI) headingRadians += 2.0 * Math.PI;
+        double sinHd = Math.sin(heading);
+        double cosHd = Math.cos(heading);
 
-        imu.updateHeadingRadians(headingRadians);
+        float fXR = (float)(force.get0()*cosHd + force.get1()*sinHd);
+        float fYR = (float)(-force.get0()*sinHd + force.get1()*cosHd);
 
-        colorSensor.updateColor(x, y);
+        //Determine the forces that would be required on each of the bot's four wheels to achieve
+        //the total force and torque predicted by the kinematic model
 
-        final double piOver2 = Math.PI / 2.0;
+        VectorF botForces = new VectorF(fXR, fYR, torque, 0);
+        VectorF wheel_X_Forces = M_ForceRobotToWheel.multiplied(botForces);
 
-        for (int i = 0; i<4; i++){
-            double sensorHeading = AngleUtils.normalizeRadians(headingRadians + i * piOver2);
-            distanceSensors[i].updateDistance( x - halfBotWidth * Math.sin(sensorHeading),
-                    y + halfBotWidth * Math.cos(sensorHeading), sensorHeading);
+        //If any of the wheel forces exceeds the product of muStatic*mass*gravity, reduce the magnitude
+        //of that force to muKinetic*mass*gravity, keeping the direction the same
+
+        for (int i=0; i<4; i++){
+            float f = wheel_X_Forces.get(i);
+            if (Math.abs(f) > MAX_WHEEL_X_FORCE) wheel_X_Forces.put(i, MAX_WHEEL_X_FORCE * Math.signum(f));
         }
+
+        //Based on the adjusted forces at each wheel, determine net force and net torque on the bot,
+        //Force is in ROBOT COORDINATE system
+
+        botForces = M_ForceWheelToRobot.multiplied(wheel_X_Forces);
+
+        //Convert these adjusted forces to WORLD COORDINATES and put into the original force DVector3
+        force.set0(botForces.get(0)*cosHd - botForces.get(1)*sinHd);
+        force.set1(botForces.get(0)*sinHd + botForces.get(1)*cosHd);
+        force.set2(0);
+
+        //Apply the adjusted force and torque to the bot
+
+        fxBody.addForce(force);
+        fxBody.addTorque(new DVector3(0, 0, botForces.get(2)));
+
+
 
         double newHandRotation = handServo.getInternalPosition() * 180.0 - 90.0;
         handRotation = Math.min(30, Math.max(-5, newHandRotation));
@@ -188,72 +280,161 @@ public class BetaBot extends VirtualBot {
         }
     }
 
-    protected Group getDisplayGroup(){
+    protected void setUpFxBody(){
+
+        //Create new FxBody object to represent the chassis. This will contain the DBody (for physics sim),
+        //a Group object for display, and multiple DGeom objects (for collision handling). It will
+        //also have children--these will be other FxBody objects that represent robot components other than
+        //the chassis.
+
+        fxBody = FxBody.newInstance(controller.getWorld(), space);
+        DBody chassisBody = fxBody.getBody();
+        DMass chassisMass = OdeHelper.createMass();
+        chassisMass.setMass(TOTAL_MASS);
+        chassisMass.setI(new DMatrix3(TOTAL_Z_INERTIA, 0, 0, 0, TOTAL_Z_INERTIA, 0, 0, 0, TOTAL_Z_INERTIA));
+        chassisBody.setMass(chassisMass);
+
+
+
+        float tetrixWidth = 1.25f * 0.0254f;
+        float sliderLength = 16f * 0.0254f;
+
+        float pltThk = 0.125f * 0.0254f;
+        float halfPltHt = 2 * 0.0254f;
+        float halfPltLen1 = 8.5f * 0.0254f;
+        float halfPltLen2 = 7.5f * 0.0254f;
+        float pltXOffset1 = 5.5f * 0.0254f;
+        float pltXOffset2 = 8.5f * 0.0254f;
+        float pltZOffset = 0.25f * 0.0254f;
+        double sideBoxLength = 2.0 * halfPltLen1;
+        double sideBoxWidth = pltXOffset2 - pltXOffset1 + pltThk;
+        double sideBoxHeight = 2.0 * halfPltHt;
+        double sideboxXOffset = 0.5 * (pltXOffset1 + pltXOffset2);
+
+        float shortRailLength = 3.125f * 0.0254f;
+        float longRailLength = 17.125f * 0.0254f;
+        float shortRailXOffset = 7 * 0.0254f;
+        float railYOffset = 7.875f * 0.0254f;
+        float wheelDiam = 4 * 0.0254f;
+        float wheelWidth = 2 * 0.0254f;
+        float wheelXOffset = 7 * 0.0254f;
+        float wheelYOffset = 6.5f * 0.0254f;
+
+        float liftThk = 0.6f*0.0254f;
+        float liftHt = 13f * 0.0254f;
+        float liftXOffset = 5.8625f * 0.0254f;
+        float liftBaseYOffset = 2.0f * 0.0254f;
+        float liftZOffset = 4.75f * 0.0254f;
+
+        float crossBarZOffset = liftHt/2 - liftThk/2;
+        float crossBarLength = 2 * liftXOffset - liftThk;
+
+        //Create Group for display of chassis
+
         Group chassis = new Group();
 
         Group[] plates = new Group[4];
         PhongMaterial plateMaterial = new PhongMaterial(Color.color(0.6, 0.3, 0));
         for (int i=0; i<4; i++){
-            plates[i] = Util3D.polygonBox(0.125f, new float[]{2,-8.5f,2,8.5f,1,8.5f,-2,7.5f,-2,-7.5f,1,-8.5f},
+            plates[i] = Util3D.polygonBox(pltThk, new float[]{halfPltHt ,-halfPltLen1, halfPltHt, halfPltLen1, halfPltHt/2,
+                            halfPltLen1, -halfPltHt, halfPltLen2, -halfPltHt, -halfPltLen2, halfPltHt/2, -halfPltLen1},
                     plateMaterial);
-            float x = (i<2? -1.0f : 1.0f) * (i%2 == 0? 8.5f:5.5f);
-            plates[i].getTransforms().addAll(new Translate(x, 0, 0.25), new Rotate(-90, Rotate.Y_AXIS));
+            float x = (i<2? -1.0f : 1.0f) * (i%2 == 0? pltXOffset2:pltXOffset1);
+            plates[i].getTransforms().addAll(new Translate(x, 0, pltZOffset), new Rotate(-90, Rotate.Y_AXIS));
         }
 
-        Group frontLeftRail = Parts.tetrixBox(1.25f, 3.125f, 1.25f, 1.25f);
-        frontLeftRail.getTransforms().addAll(new Translate(-7, 7.875, 2.875), new Rotate(90, Rotate.Z_AXIS));
-        Group frontRightRail = Parts.tetrixBox(1.25f, 3.125f, 1.25f, 1.25f);
-        frontRightRail.getTransforms().addAll(new Translate(7, 7.875, 2.875), new Rotate(90, Rotate.Z_AXIS));
-        Group frontRail = Parts.tetrixBox(1.25f, 17.125f, 1.25f, 1.25f);
-        frontRail.getTransforms().addAll(new Translate(0, 7.875, 4.125f), new Rotate(90, new Point3D(0,0,1)));
-        Group backRail = Parts.tetrixBox(1.25f, 17.125f, 2.5f, 1.25f);
-        backRail.getTransforms().addAll(new Translate(0, -7.875, 3.5), new Rotate(90, new Point3D(0, 0, 1)));
-        Box center = new Box(10, 14, 2);
-        center.setMaterial(new PhongMaterial(Color.YELLOW));
-
+        Group frontLeftRail = Parts.tetrixBox(shortRailLength, tetrixWidth, tetrixWidth, tetrixWidth);
+        frontLeftRail.getTransforms().addAll(new Translate(-shortRailXOffset, railYOffset, halfPltHt+pltZOffset+0.5*tetrixWidth));
+        Group frontRightRail = Parts.tetrixBox(shortRailLength, tetrixWidth, tetrixWidth, tetrixWidth);
+        frontRightRail.getTransforms().addAll(new Translate(shortRailXOffset, railYOffset, halfPltHt+pltZOffset+0.5*tetrixWidth));
+        Group frontRail = Parts.tetrixBox(longRailLength, tetrixWidth, tetrixWidth, tetrixWidth);
+        frontRail.getTransforms().addAll(new Translate(0, railYOffset, halfPltHt+pltZOffset+1.5*tetrixWidth));
+        Group backLeftRail = Parts.tetrixBox(shortRailLength, tetrixWidth, tetrixWidth, tetrixWidth);
+        backLeftRail.getTransforms().addAll(new Translate(-shortRailXOffset, -railYOffset, halfPltHt+pltZOffset+0.5*tetrixWidth));
+        Group backRightRail = Parts.tetrixBox(shortRailLength, tetrixWidth, tetrixWidth, tetrixWidth);
+        backRightRail.getTransforms().addAll(new Translate(shortRailXOffset, -railYOffset, halfPltHt+pltZOffset+0.5*tetrixWidth));
+        Group backRail = Parts.tetrixBox(longRailLength, tetrixWidth, tetrixWidth, tetrixWidth);
+        backRail.getTransforms().addAll(new Translate(0, -railYOffset, halfPltHt+pltZOffset+1.5*tetrixWidth));
 
         chassis.getChildren().addAll(plates);
-        chassis.getChildren().addAll(frontLeftRail, frontRightRail, frontRail, backRail);
+        chassis.getChildren().addAll(frontLeftRail, frontRightRail, frontRail, backLeftRail, backRightRail, backRail);
 
         Group[] wheels = new Group[4];
         for (int i=0; i<4; i++){
-            wheels[i] = Parts.mecanumWheel(4, 2, i);
+            wheels[i] = Parts.mecanumWheel(wheelDiam, wheelWidth, i);
             wheels[i].setRotationAxis(new Point3D(0, 0, 1));
             wheels[i].setRotate(90);
-            wheels[i].setTranslateX(i<2? -7 : 7);
-            wheels[i].setTranslateY(i==0 || i==3? -6.5 : 6.5);
+            wheels[i].setTranslateX(i<2? -wheelXOffset : wheelXOffset);
+            wheels[i].setTranslateY(i==0 || i==3? -wheelYOffset : wheelYOffset);
             wheels[i].getTransforms().add(wheelRotates[i]);
         }
 
+
+        chassis.getChildren().addAll(wheels);
+
         PhongMaterial slideMaterial = Util3D.imageMaterial("/virtual_robot/assets/rev_slide.jpg");
-        Group[] liftStages = new Group[6];
-        for (int i=0; i<4; i++){
+
+        Group leftLiftBase = Util3D.patternBox(liftThk, liftThk, liftHt, liftThk, liftThk, liftThk, slideMaterial);
+        leftLiftBase.getTransforms().addAll(new Translate(-liftXOffset, liftBaseYOffset, liftZOffset));
+        Group rightLiftBase = Util3D.patternBox(liftThk, liftThk, liftHt, liftThk, liftThk, liftThk, slideMaterial);
+        leftLiftBase.getTransforms().addAll(new Translate(liftXOffset, liftBaseYOffset, liftZOffset));
+        chassis.getChildren().addAll(leftLiftBase, rightLiftBase);
+
+        //For display purposes, set the Node object of fxBody to the display group
+
+        fxBody.setNode(chassis, false);
+
+        //Generate DGeom objects (they happen to all be boxes) for chassis collision handling
+
+        DBox rightSideBox = OdeHelper.createBox(sideBoxWidth, sideBoxLength, sideBoxHeight);
+        DBox leftSideBox = OdeHelper.createBox(sideBoxWidth, sideBoxLength, sideBoxHeight);
+        DBox leftFrontRailBox = OdeHelper.createBox(0.9*shortRailLength, tetrixWidth, 0.9*tetrixWidth);
+        DBox rightFrontRailBox = OdeHelper.createBox(0.9*shortRailLength, tetrixWidth, 0.9*tetrixWidth);
+        DBox frontRailBox = OdeHelper.createBox(0.9*longRailLength, tetrixWidth, 0.9*tetrixWidth);
+        DBox leftBackRailBox = OdeHelper.createBox(0.9*shortRailLength, tetrixWidth, 0.9*tetrixWidth);
+        DBox rightBackRailBox = OdeHelper.createBox(0.9*shortRailLength, tetrixWidth, 0.9*tetrixWidth);
+        DBox backRailBox = OdeHelper.createBox(0.9*longRailLength, tetrixWidth, 0.9*tetrixWidth);
+        DBox leftLiftBaseBox = OdeHelper.createBox(liftThk, liftThk, liftHt);
+        DBox rightLiftBaseBox = OdeHelper.createBox(liftThk, liftThk, liftHt);
+
+        //Add the chassis DGeom objects to fxBody, with appropriate offsets
+
+        fxBody.addGeom(rightSideBox, sideboxXOffset, 0, pltZOffset);
+        fxBody.addGeom(leftSideBox, -sideboxXOffset, 0, pltZOffset);
+        fxBody.addGeom(leftFrontRailBox, -shortRailXOffset, railYOffset, pltZOffset+halfPltHt+tetrixWidth/2.0);
+        fxBody.addGeom(rightFrontRailBox, shortRailXOffset, railYOffset, pltZOffset+halfPltHt+tetrixWidth/2.0);
+        fxBody.addGeom(frontRailBox, 0, railYOffset, pltZOffset+halfPltHt+1.5*tetrixWidth);
+        fxBody.addGeom(leftBackRailBox, -shortRailXOffset, -railYOffset, pltZOffset+halfPltHt+tetrixWidth/2.0);
+        fxBody.addGeom(rightBackRailBox, shortRailXOffset, -railYOffset, pltZOffset+halfPltHt+tetrixWidth/2.0);
+        fxBody.addGeom(backRailBox, 0, -railYOffset, pltZOffset+halfPltHt+1.5*tetrixWidth);
+        fxBody.addGeom(leftLiftBaseBox, -liftXOffset, liftBaseYOffset, liftZOffset);
+        fxBody.addGeom(rightLiftBaseBox, liftXOffset, liftBaseYOffset, liftZOffset);
+
+        //Generate an array of 3 Group objects for display of the 3 lift stages (other than the base stage)
+
+        Group[] liftStages = new Group[3];
+        for (int i=0; i<3; i++){
             liftStages[i] = new Group();
-            Group left = Util3D.patternBox(0.6f, 13f, 0.6f, 0.6f, 0.6f, 0.6f, slideMaterial);
-            left.getTransforms().addAll(new Translate(-5.8625, 0, 0), new Rotate(90, Rotate.X_AXIS));
-            Group right = Util3D.patternBox(0.6f, 13f, 0.6f, 0.6f, 0.6f, 0.6f, slideMaterial);
-            right.getTransforms().addAll(new Translate(5.8625, 0, 0), new Rotate(90, Rotate.X_AXIS));
+            Group left = Util3D.patternBox(liftThk, liftHt, liftThk, liftThk, liftThk, liftThk, slideMaterial);
+            left.getTransforms().add(new Translate(-liftXOffset, 0,0));
+            Group right = Util3D.patternBox(liftThk, liftHt, liftThk, liftThk, liftThk, liftThk, slideMaterial);
+            right.getTransforms().add(new Translate(liftXOffset, 0, 0));
             liftStages[i].getChildren().addAll(left, right);
-            if (i>0) {
-                liftStages[i].setTranslateY(0.6f);
-                liftStages[i - 1].getChildren().add(liftStages[i]);
-                liftStages[i].getTransforms().add(liftTranslates[i-1]);
-            }
         }
-        Group crossBar = Util3D.patternBox(0.6f, 11.125f, 0.6f, 0.6f, 0.6f, 0.6f,
+
+
+        Group crossBar = Util3D.patternBox(crossBarLength, liftThk, liftThk, liftThk, liftThk, liftThk,
                 slideMaterial);
-        crossBar.getTransforms().addAll(new Translate(0, 0, 5.2), new Rotate(90, Rotate.Z_AXIS));
-        Box box = new Box(2.5, 1.25, 1.75);
+        crossBar.getTransforms().addAll(new Translate(0, 0, crossBarZOffset));
+        Box box = new Box(0.07, 0.03, 0.03);
         box.setMaterial(new PhongMaterial(Color.color(0.3, 0.3, 0.3)));
-        box.setTranslateZ(4.025);
-        liftStages[3].getChildren().addAll(crossBar, box);
-        liftStages[4] = new Group();
-        liftStages[3].getChildren().add(liftStages[4]);
-        Group slider = Parts.tetrixBox(1.25f, 16, 1.25f, 1.25f);
-        slider.setTranslateZ(3.025);
-        slider.setTranslateY(-3.8);
-        liftStages[4].getChildren().add(slider);
-        box = new Box(1.25, 2.5, 1.25);
+        box.getTransforms().add(new Translate(0, 0, 0.1));
+        liftStages[2].getChildren().addAll(crossBar, box);
+
+
+        Group slideGroup = new Group();
+        Group slider = Parts.tetrixBox(tetrixWidth, sliderLength, tetrixWidth, tetrixWidth);
+        box = new Box(0.032, 0.064, 0.032);
         box.setMaterial(new PhongMaterial(Color.color(0.3, 0.3, 0.3)));
         box.setTranslateZ(1.775);
         liftStages[4].getChildren().add(box);
@@ -281,20 +462,18 @@ public class BetaBot extends VirtualBot {
         botGroup.getChildren().addAll(wheels);
         botGroup.getChildren().add(lift);
         botGroup.setTranslateZ(2);
-        return botGroup;
     }
+
+    private void nearCallback(Object data, DGeom o1, DGeom o2){
+        //TO DO: Collision Handling Code
+    }
+
+
 
     @Override
     public synchronized void updateDisplay(){
         super.updateDisplay();
-        handRotate.setAngle(handRotation);
-        sliderTranslate.setY(sliderTranslation);
-        for (int i=1; i<4; i++){
-            liftTranslates[i-1].setZ(liftElevation / 3.0);
-        }
-        for (int i=0; i<4; i++){
-            wheelRotates[i].setAngle(wheelRotations[i]);
-        }
+        //Probably the only thing needed here is to make the wheels appear to rotate
     }
 
 

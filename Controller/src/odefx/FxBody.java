@@ -131,6 +131,31 @@ public class FxBody {
         if (dGeom.getData() != null && dGeom.getData() instanceof String) geoms.put((String)dGeom.getData(), dGeom);
     }
 
+    public void addGeom(DGeom dGeom, double x, double y, double z){
+        addGeom(dGeom);
+        dGeom.setOffsetPosition(x, y, z);
+    }
+
+    /**
+     * Add a DGeom to the DBody, and to the space, applying the requested offset position and rotation
+     * @param dGeom
+     * @param x   x offset
+     * @param y   y offset
+     * @param z   z offset
+     * @param R   Rotation offset
+     */
+    public void addGeom(DGeom dGeom, double x, double y, double z, DMatrix3C R){
+        addGeom(dGeom);
+        dGeom.setOffsetPosition(x, y, z);
+        dGeom.setOffsetRotation(R);
+    }
+
+    public void addGeom(DGeom dGeom, double x, double y, double z, DQuaternion q){
+        addGeom(dGeom);
+        dGeom.setOffsetPosition(x, y, z);
+        dGeom.setOffsetQuaternion(q);
+    }
+
     /**
      * Return dGeom whose "key" is name. Note not all geoms will necessarily have a key.
      * @param name
@@ -209,7 +234,7 @@ public class FxBody {
      * This method should only be called from the Application Thread. This can be accomplished by
      * wrapping the call in a call to Platform.runLater.
      */
-    public void updateNodeDisplay(boolean updateChildDisplay){
+    public void updateNodeDisplay(){
         if (node == null) return;
         ObservableList<Transform> transforms = node.getTransforms();
         if (transforms.size() < 2) return;
@@ -231,12 +256,6 @@ public class FxBody {
         ((Translate)transforms.get(0)).setX(pos.get0());
         ((Translate)transforms.get(0)).setY(pos.get1());
         ((Translate)transforms.get(0)).setZ(pos.get2());
-
-        if (updateChildDisplay){
-            for (FxBody child: children){
-                updateNodeDisplay(true);
-            }
-        }
     }
 
     /**
@@ -246,15 +265,17 @@ public class FxBody {
      * @param z
      */
     public void setPosition(double x, double y, double z, boolean setChildPos) {
-        DVector3C oldPos = getPosition();
+        DVector3C oldPos = getPosition().clone();
         dBody.setPosition(x, y, z);
         if (setChildPos) {
             for (FxBody child : children) {
                 child.setPosition(((DVector3)child.getPosition()).reAdd(getPosition()).reSub(oldPos), true);
             }
         }
-        updateNodeDisplay(setChildPos);
+        updateNodeDisplay();
     }
+
+    public void setPosition(double x, double y, double z) { setPosition(x, y, z, true); }
 
 
     /**
@@ -262,15 +283,17 @@ public class FxBody {
      * @param p
      */
     public void setPosition(DVector3C p, boolean setChildPos) {
-        DVector3C oldPos = getPosition();
+        DVector3C oldPos = getPosition().clone();
         dBody.setPosition(p);
         if (setChildPos) {
             for (FxBody child : children) {
                 child.setPosition(((DVector3)child.getPosition()).reAdd(getPosition()).reSub(oldPos), true);
             }
         }
-        updateNodeDisplay(setChildPos);
+        updateNodeDisplay();
     }
+
+    public void setPosition(DVector3C p) { setPosition(p, true); }
 
 
     /**
@@ -278,7 +301,7 @@ public class FxBody {
      * @param R
      */
     public void setRotation(DMatrix3C R, boolean setChildRot) {
-        DMatrix3C oldRot = getRotation();
+        DMatrix3C oldRot = getRotation().clone();
         dBody.setRotation(R);
         if (setChildRot){
             DMatrix3 invOldRot = new DMatrix3();
@@ -295,8 +318,10 @@ public class FxBody {
                 child.setRotation(newChildRot, true);
             }
         }
-        updateNodeDisplay(setChildRot);
+        updateNodeDisplay();
     }
+
+    public void setRotation(DMatrix3C R) { setRotation(R, true);}
 
 
     /**
@@ -304,7 +329,7 @@ public class FxBody {
      * @param q
      */
     public void setQuaternion(DQuaternionC q, boolean setChildRot) {
-        DMatrix3C oldRot = getRotation();
+        DMatrix3C oldRot = getRotation().clone();
         dBody.setQuaternion(q);
         if (setChildRot){
             DMatrix3 invOldRot = new DMatrix3();
@@ -323,8 +348,10 @@ public class FxBody {
                 child.setRotation(newChildRot, true);
             }
         }
-        updateNodeDisplay(setChildRot);
+        updateNodeDisplay();
     }
+
+    public void setQuaternion(DQuaternionC q) { setQuaternion(q, true);}
 
     public void setData(Object data) {
         dBody.setData(data);

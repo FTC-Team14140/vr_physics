@@ -75,6 +75,8 @@ public class VirtualRobotController {
 
     //ODE world, space, and contact group for holding all of the DBody and DGeom objects
     private DWorld world;
+    public DWorld getWorld(){ return world; }
+
     private DSpace space;
     private DJointGroup contactGroup;
 
@@ -107,8 +109,9 @@ public class VirtualRobotController {
     private Image backgroundImage = Config.BACKGROUND;
     private PixelReader pixelReader = backgroundImage.getPixelReader();
 
-    public static final double FIELD_WIDTH = 144;
-    public static final double HALF_FIELD_WIDTH = 72;
+    public static final double FIELD_WIDTH = 3.6576;    // meters
+    public static final double HALF_FIELD_WIDTH = FIELD_WIDTH / 2.0;
+    private final double CAMERA_DISTANCE = 7.62;    // meters
 
     //Camera and Lighting
     private final PerspectiveCamera camera = new PerspectiveCamera(true);
@@ -116,7 +119,6 @@ public class VirtualRobotController {
     private final Rotate cameraAzimuthTransform = new Rotate(0, Rotate.Z_AXIS);
     private final Rotate cameraSteerXTransform = new Rotate(0, Rotate.X_AXIS);
     private final Rotate cameraSteerYTransform = new Rotate(0, Rotate.Y_AXIS);
-    private final double CAMERA_DISTANCE = 300.0;
     private boolean topView = true;
     private PointLight[][] lightArray = new PointLight[3][3];
     Button currentCameraButton;
@@ -376,7 +378,8 @@ public class VirtualRobotController {
             Runnable singleCycle = new Runnable() {
                 @Override
                 public void run() {
-                    bot.updateStateAndSensors(TIMER_INTERVAL_MILLISECONDS);
+                    bot.updateSensors();
+                    bot.updateState(TIMER_INTERVAL_MILLISECONDS);
                     Platform.runLater(updateDisplay);
                 }
             };
@@ -596,25 +599,24 @@ public class VirtualRobotController {
         }
 
         public synchronized void updateDistance(double x, double y, double headingRadians){
-            final double mmPerPixel = 144.0 * 25.4 / FIELD_WIDTH;
             final double piOver2 = Math.PI / 2.0;
             double temp = headingRadians / piOver2;
-            int side = (int)Math.round(temp); //-2, -1 ,0, 1, or 2 (2 and -2 both refer to the right side)
+            int side = (int)Math.round(temp); //-2, -1 ,0, 1, or 2 (2 and -2 both refer to the bottom)
             double offset = Math.abs(headingRadians - (side * Math.PI / 2.0));
             if (offset > MAX_OFFSET) distanceMM = distanceOutOfRange;
             else switch (side){
                 case 2:
                 case -2:
-                    distanceMM = (y + HALF_FIELD_WIDTH) * mmPerPixel;
+                    distanceMM = (y + HALF_FIELD_WIDTH) * 1000.0;
                     break;
                 case -1:
-                    distanceMM = (HALF_FIELD_WIDTH - x) * mmPerPixel;
+                    distanceMM = (HALF_FIELD_WIDTH - x) * 1000.0;
                     break;
                 case 0:
-                    distanceMM = (HALF_FIELD_WIDTH - y) * mmPerPixel;
+                    distanceMM = (HALF_FIELD_WIDTH - y) * 1000.0;
                     break;
                 case 1:
-                    distanceMM = (x + HALF_FIELD_WIDTH) * mmPerPixel;
+                    distanceMM = (x + HALF_FIELD_WIDTH) * 1000.0;
                     break;
             }
         }
@@ -997,7 +999,7 @@ public class VirtualRobotController {
 
         for (int i=0; i<3; i++) {
             for (int j = 0; j < 3; j++) {
-                lightArray[i][j] = getLamp(72.0 * (j - 1), 72.0 * (1 - i), 36);
+                lightArray[i][j] = getLamp(1.83 * (j - 1), 1.83 * (1 - i), 0.91);
                 lightArray[i][j].setLightOn(false);
             }
         }
