@@ -11,6 +11,7 @@ import javafx.scene.transform.Transform;
 import javafx.scene.transform.Translate;
 import org.ode4j.math.DMatrix3;
 import org.ode4j.ode.*;
+import util3d.Util3D;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,11 +20,60 @@ public class FxBodyHelper {
 
     public static DTriMeshData dTriMeshDataFromTriangleMesh(TriangleMesh triangleMesh){
         DTriMeshData data = OdeHelper.createTriMeshData();
-        int[] groundMeshFaces = triangleMesh.getFaces().toArray(null);
-        int[] worldMeshIndices = new int[groundMeshFaces.length / 2];
-        for (int i=0; i<worldMeshIndices.length; i++) worldMeshIndices[i] = groundMeshFaces[2*i];
-        data.build( triangleMesh.getPoints().toArray(null), worldMeshIndices);
+        int[] meshFaces = triangleMesh.getFaces().toArray(null);
+        int[] meshIndices = new int[meshFaces.length / 2];
+        for (int i=0; i<meshIndices.length; i++) meshIndices[i] = meshFaces[2*i];
+        data.build( triangleMesh.getPoints().toArray(null), meshIndices);
         return data;
+    }
+
+    public static DTriMeshData getParametricTriMeshData(double sMin, double sMax, double tMin, double tMax,
+                                                        int numFacetS, int numFacetT, boolean sClosed, boolean tClosed,
+                                                        Util3D.Param3DEqn equations){
+
+
+        int numPtsS = sClosed? numFacetS : numFacetS + 1;
+        int numPtsT = tClosed? numFacetT : numFacetT + 1;
+
+        float dS = (float)(sMax - sMin) / numFacetS;
+        float dT = (float)(tMax - tMin) / numFacetT;
+
+        float[] vertices = new float[numPtsS * numPtsT * 3];
+
+        for (int i=0; i<numPtsT; i++){
+            for (int j=0; j<numPtsS; j++){
+                float s = (float)sMin + j * dS;
+                float t = (float)tMin + i * dT;
+                float x = equations.x(s, t);
+                float y = equations.y(s, t);
+                float z = equations.z(s, t);
+                vertices[3*(numPtsS*i + j)] = x;
+                vertices[3*(numPtsS*i + j) + 1] = y;
+                vertices[3*(numPtsS*i + j) + 2] = z;
+            }
+        }
+
+        int[] indices = new int[6 * numFacetS * numFacetT];
+
+        for (int i=0; i<numFacetT; i++){
+            int i2 = tClosed && i==(numFacetT-1)? 0 : i+1;
+            for (int j=0; j<numFacetS; j++){
+                int j2 = sClosed && j==(numFacetS-1)? 0 : j+1;
+                int facetBaseIndex = 6 * (numFacetS*i + j);
+                indices[facetBaseIndex]  = numPtsS*i + j;
+                indices[facetBaseIndex+1]  = numPtsS*i + j2;
+                indices[facetBaseIndex+2] = numPtsS*i2 + j2;
+                indices[facetBaseIndex+3] = numPtsS*i2 + j2;
+                indices[facetBaseIndex+4] = numPtsS*i2 + j;
+                indices[facetBaseIndex+5] = numPtsS*i + j;
+            }
+        }
+
+        DTriMeshData data = OdeHelper.createTriMeshData();
+        data.build(vertices, indices);
+
+        return data;
+
     }
 
     private static DBox dBoxFromBox(Box box, DSpace space) {
@@ -76,21 +126,15 @@ public class FxBodyHelper {
             }
         } else if (node instanceof Shape3D){
             DGeom dGeom = dGeomFromShape3D((Shape3D)node, space);
-            if (node.getId() != null && node.getId() != "") dGeom.setData(node.getId());
             if (node instanceof Cylinder) {
                 transform = transform.createConcatenation(new Rotate(90, new Point3D(1, 0, 0)));
             }
             double[] tData = transform.toArray(MatrixType.MT_3D_3x4);
+            dGeom.setBody(dBody);
+            dGeom.setOffsetPosition(tData[3], tData[7], tData[11]);
             DMatrix3 dRotMatrix = new DMatrix3(tData[0], tData[1], tData[2], tData[4], tData[5], tData[6],
                     tData[8], tData[9], tData[10]);
-            if (dBody != null) {
-                dGeom.setBody(dBody);
-                dGeom.setOffsetPosition(tData[3], tData[7], tData[11]);
-                dGeom.setOffsetRotation(dRotMatrix);
-            } else {
-                dGeom.setPosition(tData[3], tData[7], tData[11]);
-                dGeom.setRotation(dRotMatrix);
-            }
+            dGeom.setOffsetRotation(dRotMatrix);
         }
 
         return list;

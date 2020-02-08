@@ -34,7 +34,7 @@ package org.firstinspires.ftc.robotcore.external.navigation;
 
 /**
  * {@link AxesOrder} indicates the chronological order of axes about which the three rotations
- * of an {@link Orientation} take place. The geometry of three space is such that there are
+ * of an {@link Orientation} take place. The geometry of three botSpace is such that there are
  * exactly twelve distinct rotational orders.
  *
  * @see Orientation

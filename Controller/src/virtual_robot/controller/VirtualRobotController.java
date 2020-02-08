@@ -73,7 +73,7 @@ public class VirtualRobotController {
     private SubScene subScene;
     private Group subSceneGroup;
 
-    //ODE world, space, and contact group for holding all of the DBody and DGeom objects
+    //ODE world, botSpace, and contact group for holding all of the DBody and DGeom objects
     private DWorld world;
     public DWorld getWorld(){ return world; }
 
@@ -919,13 +919,13 @@ public class VirtualRobotController {
         if ( o1 instanceof DSpace || o2 instanceof DSpace )
         {
             /**
-             * If either geom is a space, recursively test the bodies within the spaces for collision
+             * If either geom is a botSpace, recursively test the bodies within the spaces for collision
              */
             OdeHelper.spaceCollide2(o1,o2,data,nearCallback);
             return;
         }
 
-        /** If neither geom is a space, then test the two geoms against eachother for contact points
+        /** If neither geom is a botSpace, then test the two geoms against eachother for contact points
          *  Then, for each detected contact, create a contact joint that has the desired properties
          *  (e.g., bounciness and friction coefficient), and attach this joint to the two bodies. This
          *  will apply forces to the bodies during the next ODE integration step.

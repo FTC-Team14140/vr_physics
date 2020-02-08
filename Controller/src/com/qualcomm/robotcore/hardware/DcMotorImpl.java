@@ -151,6 +151,10 @@ public class DcMotorImpl implements DcMotor {
         actualPosition += actualPositionAdjustment;
     }
 
+    public synchronized void setActualPosition(double pos){
+        actualPosition = pos;
+    }
+
     /**
      * For internal use only.
      * @param rdmErrFrac

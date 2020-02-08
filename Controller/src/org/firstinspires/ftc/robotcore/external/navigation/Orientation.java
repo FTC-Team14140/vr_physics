@@ -45,10 +45,10 @@ import static java.lang.Math.atan2;
 import static java.lang.Math.PI;
 
 /**
- * Instances of {@link Orientation} represent a rotated stance in three-dimensional space
+ * Instances of {@link Orientation} represent a rotated stance in three-dimensional botSpace
  * by way of a set of three successive rotations.
  *
- * <p>There are several ways that a particular orientation in three-space can be represented.
+ * <p>There are several ways that a particular orientation in three-botSpace can be represented.
  * One way is by specifying a (unit) directional vector about which the orientation is to occur,
  * together with a rotation angle about that axis. This representation is unique up to the sign of the
  * direction and angle; that is a rotation {@code a} about a vector {@code v} produces the same
@@ -56,7 +56,7 @@ import static java.lang.Math.PI;
  * rotation is easy to visualize if the vector in question is one of the cardinal axes (ie: X,Y, or Z),
  * many find it more difficult to visualize more complex rotations in this manner.</p>
  *
- * <p>An alternative, more common, way to represent a particular orientation in three-space is by means
+ * <p>An alternative, more common, way to represent a particular orientation in three-botSpace is by means
  * of indicating three angles of rotation about three successive axes. You might for example be familiar
  * with the notions of heading, elevation, and bank angles for aircraft. Unfortunately, there are 24
  * different yet equivalent ways that a set of three rotational angles about three axes can represent
@@ -77,7 +77,7 @@ import static java.lang.Math.PI;
  * different axes (and so are a permutation of X, Y, and Z, of which there are six in number), or whether
  * the first and last axes are the same and the middle one different (e.g. Z-Y-Z); this has three
  * choices for the first axis (which is also used for the last) and two remaining choices for the
- * second axis, for a total, again, of six possibilities. The geometry of three-space is such that these
+ * second axis, for a total, again, of six possibilities. The geometry of three-botSpace is such that these
  * twelve choices are the only distinct representational possibilities. As with the extrinsic-vs-
  * intrinsic difference, all twelve of these axis {@link AxesOrder order}s are equally valid ways of
  * indicating orientation, but in any given application, one way may be more useful or easier to

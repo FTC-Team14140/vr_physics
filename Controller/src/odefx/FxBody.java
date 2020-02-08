@@ -11,6 +11,7 @@ import org.ode4j.ode.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -51,7 +52,7 @@ public class FxBody {
     /**
      * Create new instance of FxBody with new DBody
      * @param world DBody will be placed in this world
-     * @param space DGeoms created/added to this FxBody will be placed in this space
+     * @param space DGeoms created/added to this FxBody will be placed in this botSpace
      * @return
      */
     public static FxBody newInstance(DWorld world, DSpace space){
@@ -122,12 +123,12 @@ public class FxBody {
     }
 
     /**
-     * Add a DGeom to the DBody, and also to the space
+     * Add a DGeom to the DBody, and also to the botSpace
      * @param dGeom
      */
     public void addGeom(DGeom dGeom){
         dGeom.setBody(dBody);
-        if (dSpace != null) dSpace.add(dGeom);
+        if (dSpace != null && dGeom.getSpace() == null) dSpace.add(dGeom);
         if (dGeom.getData() != null && dGeom.getData() instanceof String) geoms.put((String)dGeom.getData(), dGeom);
     }
 
@@ -136,8 +137,31 @@ public class FxBody {
         dGeom.setOffsetPosition(x, y, z);
     }
 
+    public Iterable<DGeom> getGeoms(){
+        return new Iterable<DGeom>() {
+            @Override
+            public Iterator<DGeom> iterator() {
+                return new Iterator<DGeom>() {
+                    DGeom current = null;
+
+                    @Override
+                    public boolean hasNext() {
+                        if (current == null) return dBody.getFirstGeom() != null;
+                        else return dBody.getNextGeom(current) != null;
+                    }
+
+                    @Override
+                    public DGeom next() {
+                        current = current == null? dBody.getFirstGeom() : dBody.getNextGeom(current);
+                        return current;
+                    }
+                };
+            }
+        };
+    }
+
     /**
-     * Add a DGeom to the DBody, and to the space, applying the requested offset position and rotation
+     * Add a DGeom to the DBody, and to the botSpace, applying the requested offset position and rotation
      * @param dGeom
      * @param x   x offset
      * @param y   y offset
@@ -234,7 +258,7 @@ public class FxBody {
      * This method should only be called from the Application Thread. This can be accomplished by
      * wrapping the call in a call to Platform.runLater.
      */
-    public void updateNodeDisplay(){
+    public void updateNodeDisplay(boolean updateChildren){
         if (node == null) return;
         ObservableList<Transform> transforms = node.getTransforms();
         if (transforms.size() < 2) return;
@@ -256,6 +280,16 @@ public class FxBody {
         ((Translate)transforms.get(0)).setX(pos.get0());
         ((Translate)transforms.get(0)).setY(pos.get1());
         ((Translate)transforms.get(0)).setZ(pos.get2());
+
+        if (updateChildren){
+            for (FxBody fbChild: children){
+                fbChild.updateNodeDisplay(true);
+            }
+        }
+    }
+
+    public void updateNodeDisplay(){
+        updateNodeDisplay(false);
     }
 
     /**

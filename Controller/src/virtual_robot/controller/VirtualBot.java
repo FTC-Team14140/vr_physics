@@ -1,26 +1,12 @@
 package virtual_robot.controller;
 
-import javafx.collections.ObservableList;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
-import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Box;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.transform.Rotate;
-import javafx.scene.transform.Scale;
-import javafx.scene.transform.Translate;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import odefx.FxBody;
 import org.ode4j.math.DMatrix3;
 import org.ode4j.math.DMatrix3C;
-import org.ode4j.math.DVector3;
 import org.ode4j.math.DVector3C;
 import org.ode4j.ode.DGeom;
 import org.ode4j.ode.DRotation;
@@ -64,7 +50,7 @@ public abstract class VirtualBot {
     protected double halfBotWidth;
     protected double botWidth;
 
-    protected DSpace space;
+    protected DSpace botSpace;
 
     public VirtualBot(){
         subSceneGroup = controller.getSubSceneGroup();
@@ -98,8 +84,8 @@ public abstract class VirtualBot {
      * This will be used from the controller for bot-bot and bot-other collide handling.
      * @return
      */
-    public DSpace getSpace(){
-        return space;
+    public DSpace getBotSpace(){
+        return botSpace;
     }
 
     /**
