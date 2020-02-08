@@ -1,4 +1,5 @@
-# NEW:  3D Version of Virtual Robot
+# NEW:  Using ODE4J to make the 3D simulator phyics based.
+# WORK IN PROGRESS -- NOT YET FUNCTIONAL
 
 ![](/readme_image.jpg)
 
