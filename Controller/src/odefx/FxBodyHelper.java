@@ -115,7 +115,7 @@ public class FxBodyHelper {
 
         ArrayList<DGeom> list = new ArrayList<DGeom>();
 
-        Transform transform = preTransform == null? new Translate(0, 0, 0): preTransform;
+        Transform transform = preTransform == null? new Translate(0, 0, 0): preTransform.clone();
         ObservableList<Transform> transforms = node.getTransforms();
         for (int i=0; i<transforms.size(); i++) transform = transform.createConcatenation(transforms.get(i));
 
@@ -130,11 +130,18 @@ public class FxBodyHelper {
                 transform = transform.createConcatenation(new Rotate(90, new Point3D(1, 0, 0)));
             }
             double[] tData = transform.toArray(MatrixType.MT_3D_3x4);
-            dGeom.setBody(dBody);
-            dGeom.setOffsetPosition(tData[3], tData[7], tData[11]);
-            DMatrix3 dRotMatrix = new DMatrix3(tData[0], tData[1], tData[2], tData[4], tData[5], tData[6],
-                    tData[8], tData[9], tData[10]);
-            dGeom.setOffsetRotation(dRotMatrix);
+            if (dBody != null) {
+                dGeom.setBody(dBody);
+                dGeom.setOffsetPosition(tData[3], tData[7], tData[11]);
+                DMatrix3 dRotMatrix = new DMatrix3(tData[0], tData[1], tData[2], tData[4], tData[5], tData[6],
+                        tData[8], tData[9], tData[10]);
+                dGeom.setOffsetRotation(dRotMatrix);
+            } else {
+                dGeom.setPosition(tData[3], tData[7], tData[11]);
+                DMatrix3 dRotMatrix = new DMatrix3(tData[0], tData[1], tData[2], tData[4], tData[5], tData[6],
+                        tData[8], tData[9], tData[10]);
+                dGeom.setRotation(dRotMatrix);
+            }
         }
 
         return list;

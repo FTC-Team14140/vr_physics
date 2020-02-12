@@ -24,8 +24,8 @@ import virtual_robot.util.AngleUtils;
  * XDriveBot is the controller class for the "xdrive_bot.fxml" markup file.
  *
  */
-@BotConfig(name = "XDrive Bot")
-public class XDriveBot extends VirtualBot {
+//@BotConfig(name = "XDrive Bot")
+public abstract class XDriveBot extends VirtualBot {
 
     public final MotorType motorType = MotorType.Neverest40;
     private DcMotorImpl[] motors = null;
@@ -112,36 +112,36 @@ public class XDriveBot extends VirtualBot {
             }
         }
 
-        double dxR = robotDeltaPos[0];
-        double dyR = robotDeltaPos[1];
-        double headingChange = robotDeltaPos[2];
-        double avgHeading = headingRadians + headingChange / 2.0;
-
-        double sin = Math.sin(avgHeading);
-        double cos = Math.cos(avgHeading);
-
-        x += dxR * cos - dyR * sin;
-        y += dxR * sin + dyR * cos;
-        headingRadians += headingChange;
-
-        if (x >  (halfFieldWidth - halfBotWidth)) x = halfFieldWidth - halfBotWidth;
-        else if (x < (halfBotWidth - halfFieldWidth)) x = halfBotWidth - halfFieldWidth;
-        if (y > (halfFieldWidth - halfBotWidth)) y = halfFieldWidth - halfBotWidth;
-        else if (y < (halfBotWidth - halfFieldWidth)) y = halfBotWidth - halfFieldWidth;
-
-        if (headingRadians > Math.PI) headingRadians -= 2.0 * Math.PI;
-        else if (headingRadians < -Math.PI) headingRadians += 2.0 * Math.PI;
-        //gyro.updateHeading(headingRadians * 180.0 / Math.PI);
-        imu.updateHeadingRadians(headingRadians);
-
-        colorSensor.updateColor(x, y);
-
-        final double piOver2 = Math.PI / 2.0;
-        for (int i = 0; i<4; i++){
-            double sensorHeading = AngleUtils.normalizeRadians(headingRadians + i * piOver2);
-            distanceSensors[i].updateDistance( x - halfBotWidth * Math.sin(sensorHeading),
-                    y + halfBotWidth * Math.cos(sensorHeading), sensorHeading);
-        }
+//        double dxR = robotDeltaPos[0];
+//        double dyR = robotDeltaPos[1];
+//        double headingChange = robotDeltaPos[2];
+//        double avgHeading = headingRadians + headingChange / 2.0;
+//
+//        double sin = Math.sin(avgHeading);
+//        double cos = Math.cos(avgHeading);
+//
+//        x += dxR * cos - dyR * sin;
+//        y += dxR * sin + dyR * cos;
+//        headingRadians += headingChange;
+//
+//        if (x >  (halfFieldWidth - halfBotWidth)) x = halfFieldWidth - halfBotWidth;
+//        else if (x < (halfBotWidth - halfFieldWidth)) x = halfBotWidth - halfFieldWidth;
+//        if (y > (halfFieldWidth - halfBotWidth)) y = halfFieldWidth - halfBotWidth;
+//        else if (y < (halfBotWidth - halfFieldWidth)) y = halfBotWidth - halfFieldWidth;
+//
+//        if (headingRadians > Math.PI) headingRadians -= 2.0 * Math.PI;
+//        else if (headingRadians < -Math.PI) headingRadians += 2.0 * Math.PI;
+//        //gyro.updateHeading(headingRadians * 180.0 / Math.PI);
+//        imu.updateHeadingRadians(headingRadians);
+//
+//        colorSensor.updateColor(x, y);
+//
+//        final double piOver2 = Math.PI / 2.0;
+//        for (int i = 0; i<4; i++){
+//            double sensorHeading = AngleUtils.normalizeRadians(headingRadians + i * piOver2);
+//            distanceSensors[i].updateDistance( x - halfBotWidth * Math.sin(sensorHeading),
+//                    y + halfBotWidth * Math.cos(sensorHeading), sensorHeading);
+//        }
 
         double newArmRotation = armRotation + 0.05 * armRotationMotor.update(millis);
         armRotation = Math.max(0, Math.min(90, newArmRotation));

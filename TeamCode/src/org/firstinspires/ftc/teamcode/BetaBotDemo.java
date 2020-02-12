@@ -87,7 +87,7 @@ public class BetaBotDemo extends LinearOpMode {
             else if (gamepad1.a) slideCRServo.setPower(-1.0);
             else slideCRServo.setPower(0);
 
-            if (gamepad1.x) handServo.setPosition(1);
+            if (gamepad1.x) handServo.setPosition(0.6);
             else if (gamepad1.b) handServo.setPosition(0);
 
             telemetry.addData("Gamepad 1 left stick controls fwd/strafe.","");

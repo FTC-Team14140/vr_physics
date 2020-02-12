@@ -22,8 +22,8 @@ import virtual_robot.util.AngleUtils;
  *
  * TwoWheelBot is the controller class for the "two_wheel_bot.fxml" markup file.
  */
-@BotConfig(name = "Two Wheel Bot")
-public class TwoWheelBot extends VirtualBot {
+//@BotConfig(name = "Two Wheel Bot")
+public abstract class TwoWheelBot extends VirtualBot {
 
     public final MotorType motorType = MotorType.Neverest40;
     private DcMotorImpl leftMotor = null;
@@ -88,30 +88,30 @@ public class TwoWheelBot extends VirtualBot {
         double rightWheelDist = deltaRightPos * wheelCircumference / motorType.TICKS_PER_ROTATION;
         double distTraveled = (leftWheelDist + rightWheelDist) / 2.0;
         double headingChange = (rightWheelDist - leftWheelDist) / interWheelDistance;
-        double deltaRobotX = -distTraveled * Math.sin(headingRadians + headingChange / 2.0);
-        double deltaRobotY = distTraveled * Math.cos(headingRadians + headingChange / 2.0);
-        x += deltaRobotX;
-        y += deltaRobotY;
-        if (x >  (halfFieldWidth - halfBotWidth)) x = halfFieldWidth - halfBotWidth;
-        else if (x < (halfBotWidth - halfFieldWidth)) x = halfBotWidth - halfFieldWidth;
-        if (y > (halfFieldWidth - halfBotWidth)) y = halfFieldWidth - halfBotWidth;
-        else if (y < (halfBotWidth - halfFieldWidth)) y = halfBotWidth - halfFieldWidth;
-        headingRadians += headingChange;
-        if (headingRadians > Math.PI) headingRadians -= 2.0 * Math.PI;
-        else if (headingRadians < -Math.PI) headingRadians += 2.0 * Math.PI;
-        gyro.updateHeading(headingRadians * 180.0 / Math.PI);
-        colorSensor.updateColor(x, y);
-        final double piOver2 = Math.PI / 2.0;
-        for (int i = 0; i<4; i++){
-            double sensorHeading = AngleUtils.normalizeRadians(headingRadians + i * piOver2);
-            distanceSensors[i].updateDistance( x - halfBotWidth * Math.sin(sensorHeading),
-                    y + halfBotWidth * Math.cos(sensorHeading), sensorHeading);
-        }
-
-        double newArmRotation = armRotation + 0.05 * armRotationMotor.update(millis);
-        armRotation = Math.max(0, Math.min(90, newArmRotation));
-        double newArmExtension = armExtension + 0.01 * armExtensionMotor.update(millis);
-        armExtension = Math.max(0, Math.min(22, newArmExtension));
+//        double deltaRobotX = -distTraveled * Math.sin(headingRadians + headingChange / 2.0);
+//        double deltaRobotY = distTraveled * Math.cos(headingRadians + headingChange / 2.0);
+//        x += deltaRobotX;
+//        y += deltaRobotY;
+//        if (x >  (halfFieldWidth - halfBotWidth)) x = halfFieldWidth - halfBotWidth;
+//        else if (x < (halfBotWidth - halfFieldWidth)) x = halfBotWidth - halfFieldWidth;
+//        if (y > (halfFieldWidth - halfBotWidth)) y = halfFieldWidth - halfBotWidth;
+//        else if (y < (halfBotWidth - halfFieldWidth)) y = halfBotWidth - halfFieldWidth;
+//        headingRadians += headingChange;
+//        if (headingRadians > Math.PI) headingRadians -= 2.0 * Math.PI;
+//        else if (headingRadians < -Math.PI) headingRadians += 2.0 * Math.PI;
+//        gyro.updateHeading(headingRadians * 180.0 / Math.PI);
+//        colorSensor.updateColor(x, y);
+//        final double piOver2 = Math.PI / 2.0;
+//        for (int i = 0; i<4; i++){
+//            double sensorHeading = AngleUtils.normalizeRadians(headingRadians + i * piOver2);
+//            distanceSensors[i].updateDistance( x - halfBotWidth * Math.sin(sensorHeading),
+//                    y + halfBotWidth * Math.cos(sensorHeading), sensorHeading);
+//        }
+//
+//        double newArmRotation = armRotation + 0.05 * armRotationMotor.update(millis);
+//        armRotation = Math.max(0, Math.min(90, newArmRotation));
+//        double newArmExtension = armExtension + 0.01 * armExtensionMotor.update(millis);
+//        armExtension = Math.max(0, Math.min(22, newArmExtension));
     }
 
     protected Group getDisplayGroup(){

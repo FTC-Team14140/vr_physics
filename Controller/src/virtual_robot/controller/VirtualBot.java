@@ -7,10 +7,9 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import odefx.FxBody;
 import org.ode4j.math.DMatrix3;
 import org.ode4j.math.DMatrix3C;
+import org.ode4j.math.DVector3;
 import org.ode4j.math.DVector3C;
-import org.ode4j.ode.DGeom;
-import org.ode4j.ode.DRotation;
-import org.ode4j.ode.DSpace;
+import org.ode4j.ode.*;
 import virtual_robot.config.Config;
 
 /**
@@ -62,8 +61,9 @@ public abstract class VirtualBot {
 
     public void init(){
         createHardwareMap();
+        botSpace = OdeHelper.createSimpleSpace(controller.getSpace());
+        botSpace.setData("Bot Space");
         setUpFxBody();
-        zBase = fxBody.getPosition().get2();
     }
 
     static void setController(VirtualRobotController ctrl){
@@ -88,13 +88,7 @@ public abstract class VirtualBot {
         return botSpace;
     }
 
-    /**
-     * Return the bot's DNearCallback object.
-     * This will be used by the controller for bot-bot and bot-other collide handling.
-     * @return
-     */
-    public abstract DGeom.DNearCallback getNearCallback();
-
+    public abstract void handleContacts(int numContacts, DGeom o1, DGeom o2, DContactBuffer contacts, DJointGroup contactGroup);
 
 
     /**
@@ -147,13 +141,19 @@ public abstract class VirtualBot {
         return new double[] {pos.get0(), pos.get1(), theta};
     }
 
+    public double getHeadingRadians(){
+        DMatrix3C rot = fxBody.getRotation();
+        double theta = Math.atan2(rot.get10(), rot.get00());
+        return theta;
+    }
+
     /**
      * Update bot display based on the current state of its FxBody objects.
      *
      * This must be called from the main application thread, via a Platform.runLater call if needed.
      */
     public void updateDisplay(){
-        fxBody.updateNodeDisplay();
+        fxBody.updateNodeDisplay(true);
     }
 
     /**
@@ -194,6 +194,11 @@ public abstract class VirtualBot {
         }
     }
 
+    public void addToDisplay(){
+        subSceneGroup.getChildren().add(fxBody.getNode());
+        for (FxBody fb: fxBody.getChildren()) subSceneGroup.getChildren().add(fb.getNode());
+    }
+
     public HardwareMap getHardwareMap(){ return hardwareMap; }
 
     /**
@@ -201,5 +206,15 @@ public abstract class VirtualBot {
      * hardwareMap variable.
      */
     protected abstract void createHardwareMap();
+
+    public void getGeomPositionOnField(DGeom dGeom, DMatrix3 rot, DVector3 pos){
+        DMatrix3C geomRotOffset = dGeom.getOffsetRotation();
+        DVector3C geomPosOffset = dGeom.getOffsetPosition();
+        DMatrix3C botRot = fxBody.getRotation();
+        DVector3C botPos = fxBody.getPosition();
+        DMatrix.dMultiply0(rot, botRot, geomRotOffset);
+        DMatrix.dMultiply0(pos, botRot, geomPosOffset);
+        pos.add(botPos);
+    }
 
 }

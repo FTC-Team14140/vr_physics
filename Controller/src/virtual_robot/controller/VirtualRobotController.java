@@ -25,6 +25,7 @@ import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.util.Callback;
+import odefx.FxBody;
 import odefx.FxBodyHelper;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.ode4j.ode.*;
@@ -42,6 +43,7 @@ import javafx.scene.paint.Color;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.hardware.DcMotorImpl;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import virtual_robot.controller.robots.BetaBot;
 import virtual_robot.controller.robots.MechanumBot;
 
 import java.io.IOException;
@@ -50,6 +52,8 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import static org.ode4j.ode.OdeConstants.*;
 
 /**
  * For internal use only. Controller class for the JavaFX application.
@@ -78,10 +82,15 @@ public class VirtualRobotController {
     public DWorld getWorld(){ return world; }
 
     private DSpace space;
+    public DSpace getSpace() { return space; }
+
     private DJointGroup contactGroup;
 
     // fieldPlane is the DGeom that serves as the floor for collision purposes
     DPlane fieldPlane;
+
+    //Test Block
+    FxBody testBlock;
 
     //Callback object for collision detection; it just calls the nearCallback method.
     private DGeom.DNearCallback nearCallback = new DGeom.DNearCallback() {
@@ -109,9 +118,9 @@ public class VirtualRobotController {
     private Image backgroundImage = Config.BACKGROUND;
     private PixelReader pixelReader = backgroundImage.getPixelReader();
 
-    public static final double FIELD_WIDTH = 3.6576;    // meters
+    public static final double FIELD_WIDTH = 365.76;    // meters
     public static final double HALF_FIELD_WIDTH = FIELD_WIDTH / 2.0;
-    private final double CAMERA_DISTANCE = 7.62;    // meters
+    private final double CAMERA_DISTANCE = 762;    // meters
 
     //Camera and Lighting
     private final PerspectiveCamera camera = new PerspectiveCamera(true);
@@ -202,7 +211,7 @@ public class VirtualRobotController {
                 validConfigClasses.add(c);
         }
         cbxConfig.setItems(validConfigClasses);
-        cbxConfig.setValue(MechanumBot.class);
+        cbxConfig.setValue(BetaBot.class);
 
         cbxConfig.setCellFactory(new Callback<ListView<Class<?>>, ListCell<Class<?>>>() {
             @Override
@@ -344,6 +353,8 @@ public class VirtualRobotController {
         bot = getVirtualBotInstance(cbxConfig.getValue());
         if (bot == null) System.out.println("Unable to get VirtualBot Object");
         hardwareMap = bot.getHardwareMap();
+        bot.addToDisplay();
+        bot.setPosition(0, 0, 0);
         initializeTelemetryTextArea();
         sldRandomMotorError.setValue(0.0);
         sldSystematicMotorError.setValue(0.0);
@@ -368,19 +379,17 @@ public class VirtualRobotController {
             };
             opModeThread = new Thread(runOpMode);
             opModeThread.setDaemon(true);
-            Runnable updateDisplay = new Runnable() {
-                @Override
-                public void run() {
-                    bot.updateDisplay();
-                    updateTelemetryDisplay();
-                }
-            };
+
             Runnable singleCycle = new Runnable() {
                 @Override
                 public void run() {
-                    bot.updateSensors();
-                    bot.updateState(TIMER_INTERVAL_MILLISECONDS);
-                    Platform.runLater(updateDisplay);
+                    singlePhysicsCycle();
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            updateDisplay();
+                        }
+                    });
                 }
             };
             executorService = Executors.newSingleThreadScheduledExecutor();
@@ -408,6 +417,41 @@ public class VirtualRobotController {
             initializeTelemetryTextArea();
             cbxConfig.setDisable(false);
         }
+    }
+
+    private synchronized void updateDisplay(){
+        bot.updateDisplay();
+        testBlock.updateNodeDisplay();
+        updateTelemetryDisplay();
+    }
+
+    private synchronized void singlePhysicsCycle(){
+        /**
+         * Update bot sensors
+         */
+        bot.updateSensors();
+
+        /**
+         * Update forces and speeds of bot motor joints based on states of motors, bot position, etc.
+         */
+        bot.updateState(TIMER_INTERVAL_MILLISECONDS);
+
+        /**
+         * Check for collisions between geoms in space. The nearCallback will assign contact joints
+         * between bodies based on the collisions detected. The joints are stored in contactGroup.
+         */
+        space.collide(null, nearCallback);
+
+        /**
+         * Do a physics simulation step (i.e., an integration step)
+         */
+        world.quickStep(TIMER_INTERVAL_MILLISECONDS/1000.0);
+
+        /**
+         * Empty the contractGroup. This contains the contact joints that were created during the previous
+         * collision detection. Emptying it destroys those joints.
+         */
+        contactGroup.empty();
     }
 
     private void runOpModeAndCleanUp(){
@@ -895,8 +939,13 @@ public class VirtualRobotController {
         world = OdeHelper.createWorld();
         space = OdeHelper.createHashSpace(null);
         contactGroup = OdeHelper.createJointGroup();
-        world.setGravity(0, 0, -9.8);
+        world.setGravity(0, 0, -980);
         world.setQuickStepNumIterations(12);
+        world.setERP(0.8);
+        world.setContactSurfaceLayer(0.1);
+        System.out.println("Original damping: " + world.getLinearDamping() + "  " + world.getAngularDamping());
+        world.setLinearDamping(0.01);
+        world.setAngularDamping(0.1);
     }
 
     void shutDownODE(){
@@ -934,15 +983,21 @@ public class VirtualRobotController {
         final int N = 32;
         DContactBuffer contacts = new DContactBuffer(N);
         int n = OdeHelper.collide (o1,o2,N,contacts.getGeomBuffer());//[0].geom),sizeof(dContact));
-        if (n > 0)
-        {
+
+        if (n == 0) return;
+
+        if (o1.getSpace() == bot.getBotSpace() || o2.getSpace() == bot.getBotSpace()){
+            bot.handleContacts(n, o1, o2, contacts, contactGroup);
+        } else {
             for (int i=0; i<n; i++)
             {
                 DContact contact = contacts.get(i);
-                contact.surface.mode = 0;      //Enable bounce
+                contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1;      //Enable bounce
                 contact.surface.bounce = 0;
-                contact.surface.bounce_vel = 1.0;
-                contact.surface.mu = 0.5;
+                contact.surface.bounce_vel = 0.1;
+                contact.surface.mu = 1.0;
+                contact.surface.soft_cfm = 0;
+                contact.surface.soft_erp = 0.2;
                 DJoint c = OdeHelper.createContactJoint (world,contactGroup,contact);
                 c.attach (contact.geom.g1.getBody(), contact.geom.g2.getBody());
             }
@@ -999,7 +1054,7 @@ public class VirtualRobotController {
 
         for (int i=0; i<3; i++) {
             for (int j = 0; j < 3; j++) {
-                lightArray[i][j] = getLamp(1.83 * (j - 1), 1.83 * (1 - i), 0.91);
+                lightArray[i][j] = getLamp(183 * (j - 1), 183 * (1 - i), 91);
                 lightArray[i][j].setLightOn(false);
             }
         }
@@ -1046,15 +1101,28 @@ public class VirtualRobotController {
         subSceneGroup.getChildren().add(fieldView);
 
         fieldPlane = OdeHelper.createPlane(space, 0, 0, 1, 0);
+        fieldPlane.setData("Field Plane");
 
-        Group bridgeGroup = Parts.skyStoneBridge();
-        DSpace bridgeSpace = OdeHelper.createSimpleSpace();
-        FxBodyHelper.dGeomsFromNode(bridgeGroup, bridgeSpace, null);
+        DSpace bridgeSpace = OdeHelper.createSimpleSpace(space);
+        Group bridgeGroup = Parts.skyStoneBridge(bridgeSpace);
         DAABBC daabbc = bridgeSpace.getAABB();
-        System.out.printf("Bridge Group Bouding Box: xMin = %.1f  xMax = %.1f  yMin = %.1f  yMax = %.1f  zMin = %.1f  zMax = %.1f\n",
+        System.out.printf("Bridge Group Bounding Box: xMin = %.1f  xMax = %.1f  yMin = %.1f  yMax = %.1f  zMin = %.1f  zMax = %.1f\n",
                 daabbc.getMin0(), daabbc.getMax0(), daabbc.getMin1(), daabbc.getMax1(), daabbc.getMin2(), daabbc.getMax2());
 
         subSceneGroup.getChildren().add(bridgeGroup);
+
+        testBlock = FxBody.newInstance(world, space);
+        DMass testBlockMass = OdeHelper.createMass();
+        testBlockMass.setBox(1, 20, 10, 10);
+        testBlockMass.setMass(100);
+        testBlock.setMass(testBlockMass);
+        Box testBlockBox = new Box(20, 10, 10);
+        testBlockBox.setMaterial(new PhongMaterial(Color.YELLOW));
+        subSceneGroup.getChildren().add(testBlockBox);
+        testBlock.setNode(testBlockBox, true);
+        testBlock.getFirstGeom().setData("testBlock");
+        testBlock.setPosition(0, -80, 20);
+
 
     }
 
