@@ -9,12 +9,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
 import javafx.scene.transform.Rotate;
-import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
-import odefx.BoxOde;
+import odefx.CBits;
 import odefx.FxBody;
 import odefx.FxBodyHelper;
-import odefx.GroupOde;
+import odefx.node_with_geom.BoxWithDGeom;
+import odefx.node_with_geom.CylWithDGeom;
+import odefx.node_with_geom.GroupWithDGeoms;
 import org.firstinspires.ftc.robotcore.external.matrices.GeneralMatrixF;
 import org.firstinspires.ftc.robotcore.external.matrices.MatrixF;
 import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
@@ -37,9 +38,9 @@ import static org.ode4j.ode.OdeConstants.*;
 public class BetaBot extends VirtualBot {
 
     private final float TOTAL_MASS = 15000;  //mg
-    private final float TOTAL_Z_INERTIA = 5000000f; //kg*m2
+    private final float TOTAL_Z_INERTIA = 5000000f; //gm*cm2
     private final float FIELD_FRICTION_COEFF = 1.0f;
-    private final float GRAVITY = 980f; // m/s2
+    private final float GRAVITY = 980f; // cm/s2
     //Max possible force (in Robot-X direction) at any wheel (each wheel gets 1/4 of robot weight)
     private final float MAX_WHEEL_X_FORCE = TOTAL_MASS * GRAVITY * FIELD_FRICTION_COEFF / (4.0f * (float)Math.sqrt(2));
 
@@ -51,6 +52,8 @@ public class BetaBot extends VirtualBot {
     private ServoImpl handServo = null;
     private CRServoImpl sliderCRServo = null;
     private VirtualRobotController.DistanceSensorImpl[] distanceSensors = null;
+    private DcMotorImpl leftIntakeMotor = null;
+    private DcMotorImpl rightIntakeMotor = null;
 
     private double wheelCircumference;
     private double interWheelWidth;
@@ -62,9 +65,8 @@ public class BetaBot extends VirtualBot {
     GeneralMatrixF  M_ForceWheelToRobot;
     MatrixF M_ForceRobotToWheel;
 
-    private GroupOde lift;
+    GroupWithDGeoms lift;
 
-//    Rotate handRotate = new Rotate(0, 0, 0, 8, new Point3D(0,1,0));
     Translate rightHandTranslate = new Translate(0, 0, 0);
     Translate leftHandTranslate = new Translate(0, 0, 0);
     Translate sliderTranslate = new Translate(0, -10, 0);
@@ -76,6 +78,10 @@ public class BetaBot extends VirtualBot {
     double sliderTranslation = -10;
     double liftElevation = 0;
     double[] wheelRotations = new double[]{0,0,0,0};
+    double verticalLiftSpeed = 0;
+    double sliderSpeed = 0;
+    double rightIntakeSpeed = 0;
+    double leftIntakeSpeed = 0;
 
 
     @Override
@@ -89,6 +95,9 @@ public class BetaBot extends VirtualBot {
         };
 
         liftMotor = (DcMotorImpl)hardwareMap.dcMotor.get("lift_motor");
+
+        leftIntakeMotor = (DcMotorImpl)hardwareMap.dcMotor.get("left_intake_motor");
+        rightIntakeMotor = (DcMotorImpl)hardwareMap.dcMotor.get("right_intake_motor");
 
         distanceSensors = new VirtualRobotController.DistanceSensorImpl[]{
                 hardwareMap.get(VirtualRobotController.DistanceSensorImpl.class, "front_distance"),
@@ -128,6 +137,8 @@ public class BetaBot extends VirtualBot {
         String[] motorNames = new String[]{"back_left_motor", "front_left_motor", "front_right_motor", "back_right_motor"};
         for (String name: motorNames) hardwareMap.put(name, new DcMotorImpl(motorType));
         hardwareMap.put("lift_motor", new DcMotorImpl(MotorType.Neverest40, false, false));
+        hardwareMap.put("left_intake_motor", new DcMotorImpl(MotorType.Neverest40, false, false));
+        hardwareMap.put("right_intake_motor", new DcMotorImpl(MotorType.Neverest40, false, false));
         String[] distNames = new String[]{"front_distance", "left_distance", "back_distance", "right_distance"};
         for (String name: distNames) hardwareMap.put(name, controller.new DistanceSensorImpl());
         hardwareMap.put("imu", new BNO055IMUImpl(this, 10));
@@ -254,8 +265,11 @@ public class BetaBot extends VirtualBot {
 //        double newHandRotation = handServo.getInternalPosition() * 180.0 - 90.0;
 //        handRotation = Math.min(30, Math.max(-5, newHandRotation));
 
-        double newHandTranslation = handServo.getInternalPosition() * 2.0;
+        double newHandTranslation = handServo.getInternalPosition() * 4.0;
         handTranslation = newHandTranslation;
+
+        double oldSliderTranslation = sliderTranslation;
+        double oldLiftElevation = liftElevation;
 
         double newSliderTranslation = sliderTranslation + sliderCRServo.updatePositionDegrees(millis) * 10.0 / 360.0;
         double deltaLiftMotor = liftMotor.update(millis);
@@ -273,6 +287,8 @@ public class BetaBot extends VirtualBot {
             minElev = 14.1;
         }
 
+        sliderSpeed = (sliderTranslation - oldSliderTranslation) / millis;
+
         if (newLiftElevation > 91){
             if (Math.abs(newLiftElevation - liftElevation) < 0.0001) liftMotor.adjustActualPosition(-deltaLiftMotor);
             else {
@@ -288,6 +304,15 @@ public class BetaBot extends VirtualBot {
         } else {
             liftElevation = newLiftElevation;
         }
+
+        verticalLiftSpeed =  1000.0 * (liftElevation - oldLiftElevation) / millis;
+        sliderSpeed = 1000.0 * (sliderTranslation - oldSliderTranslation) / millis;
+
+        rightIntakeSpeed = 1000.0 * rightIntakeMotor.update(millis) * 15.0/(1120.0 * millis);
+        leftIntakeSpeed = 1000.0* leftIntakeMotor.update(millis) * 15.0 / (1120.0 *  millis);
+
+//        System.out.println("Right intake speed: " + rightIntakeSpeed);
+//        System.out.println("Left intake speed: " + leftIntakeSpeed);
     }
 
     /**
@@ -754,14 +779,14 @@ public class BetaBot extends VirtualBot {
         fxBody.addGeom(botBottomMesh, 0, 0, -halfPltHt);
 
 
-        lift = new GroupOde("lift");
-        GroupOde[] liftStages = new GroupOde[3];
+        lift = new GroupWithDGeoms("lift");
+        GroupWithDGeoms[] liftStages = new GroupWithDGeoms[3];
 
         for (int i=0; i<3; i++){
-            liftStages[i] = new GroupOde("lift stage " + i);
-            BoxOde left = new BoxOde(liftThk, liftThk, liftHt, fxBody, "  left box");
+            liftStages[i] = new GroupWithDGeoms("lift stage " + i);
+            BoxWithDGeom left = new BoxWithDGeom(liftThk, liftThk, liftHt, fxBody, "  left box");
             left.getTransforms().addAll(new Translate(-liftXOffset, 0, 0));
-            BoxOde right = new BoxOde(liftThk, liftThk, liftHt, fxBody, "  right box");
+            BoxWithDGeom right = new BoxWithDGeom(liftThk, liftThk, liftHt, fxBody, "  right box");
             right.getTransforms().addAll(new Translate(liftXOffset, 0, 0));
             left.setMaterial(i%2 == 0? liftMaterial1 : liftMaterial0);
             right.setMaterial(i%2 == 0? liftMaterial1 : liftMaterial0);
@@ -772,7 +797,7 @@ public class BetaBot extends VirtualBot {
 
         lift.getChildren().add(liftStages[0]);
 
-        BoxOde crossBar = new BoxOde(crossBarLength, liftThk, liftThk, fxBody, "  cross bar");
+        BoxWithDGeom crossBar = new BoxWithDGeom(crossBarLength, liftThk, liftThk, fxBody, "  cross bar");
         crossBar.setMaterial(liftMaterial0);
         crossBar.getTransforms().addAll(new Translate(0, 0, crossBarZOffset));
         Box box = new Box(7, 3, 3);
@@ -780,27 +805,33 @@ public class BetaBot extends VirtualBot {
         box.getTransforms().add(new Translate(0, 0, crossBarZOffset-liftThk));
         liftStages[2].getChildren().addAll(crossBar, box);
 
-        GroupOde slideGroup = new GroupOde("slideGroup");
+        GroupWithDGeoms slideGroup = new GroupWithDGeoms("slideGroup");
 
-        BoxOde slider = new BoxOde(tetrixWidth, sliderLength, tetrixWidth, fxBody, "  slider");
+        BoxWithDGeom slider = new BoxWithDGeom(tetrixWidth, sliderLength, tetrixWidth, fxBody, "  slider");
         slider.setMaterial(liftMaterial1);
-        BoxOde boxOde = new BoxOde(3.2, 6.4, 10, fxBody, "  slider box 1");
-        boxOde.setMaterial(new PhongMaterial(Color.color(0.3, 0.3, 0.3)));
-        boxOde.getTransforms().add(new Translate(0, 0.2*sliderLength, -tetrixWidth/2 - 5));
-        slideGroup.getChildren().addAll(slider, boxOde);
-        boxOde = new BoxOde(12.5,12.5, 0.4, fxBody, "  slider box 2");
-        boxOde.setMaterial(new PhongMaterial(Color.color(0.6, 0.6, 0, 0.5)));
-        boxOde.getTransforms().add(new Translate(0, 0.2*sliderLength, -tetrixWidth/2 - 10));
-        slideGroup.getChildren().add(boxOde);
-        BoxOde leftHand = new BoxOde(0.4, 12.5, 16, fxBody, "hand left");
+        BoxWithDGeom boxWithDGeom = new BoxWithDGeom(3.2, 6.4, 10, fxBody, "  slider box 1");
+        boxWithDGeom.setMaterial(new PhongMaterial(Color.color(0.3, 0.3, 0.3)));
+        boxWithDGeom.getTransforms().add(new Translate(0, 0.2*sliderLength, -tetrixWidth/2 - 5));
+        slideGroup.getChildren().addAll(slider, boxWithDGeom);
+        boxWithDGeom = new BoxWithDGeom(16,12.5, 0.4, fxBody, "  slider box 2");
+        boxWithDGeom.setMaterial(new PhongMaterial(Color.color(0.6, 0.6, 0, 0.5)));
+        boxWithDGeom.getTransforms().add(new Translate(0, 0.2*sliderLength, -tetrixWidth/2 - 10));
+        slideGroup.getChildren().add(boxWithDGeom);
+        BoxWithDGeom leftHand = new BoxWithDGeom(0.4, 12.5, 16, fxBody, OdeHelper.createBox(1, 12.5, 16));
+        leftHand.setRelGeomOffset(new Translate(0.3, 0, 0));
         leftHand.setMaterial(new PhongMaterial(Color.color(0.6, 0, 0.6, 0.5)));
-        leftHand.getTransforms().addAll(new Translate(-6.25, 0.2*sliderLength, -tetrixWidth/2-18), leftHandTranslate);
+        leftHand.getTransforms().addAll(new Translate(-8, 0.2*sliderLength, -tetrixWidth/2-18), leftHandTranslate);
         slideGroup.getChildren().add(leftHand);
-        BoxOde rightHand = new BoxOde(0.4, 12.5, 16, fxBody, "hand right");
+//        BoxOde rightHand = new BoxOde(0.4, 12.5, 16, fxBody, "hand right");
+        BoxWithDGeom rightHand = new BoxWithDGeom(0.4, 12.5, 16, fxBody, OdeHelper.createBox(1, 12.5, 16));
+        rightHand.setRelGeomOffset(new Translate(-0.3, 0, 0));
         rightHand.setMaterial(new PhongMaterial(Color.color(0.6, 0, 0.6, 0.5)));
-        rightHand.getTransforms().addAll(new Translate(6.25, 0.2*sliderLength, -tetrixWidth/2-18), rightHandTranslate);
+        rightHand.getTransforms().addAll(new Translate(8, 0.2*sliderLength, -tetrixWidth/2-18), rightHandTranslate);
         slideGroup.getChildren().add(rightHand);
         slideGroup.getTransforms().addAll(sliderTranslate, new Translate(0, 0, liftHt/2  - 3));
+
+        DGeom rightHandGeom = rightHand.getDGeom();
+        DGeom leftHandGeom = leftHand.getDGeom();
 
         liftStages[2].getChildren().add(slideGroup);
 
@@ -810,9 +841,50 @@ public class BetaBot extends VirtualBot {
 
         lift.updateGeomOffsets();
 
-        lift.printGeoms();
+        GroupWithDGeoms intakeGroup = new GroupWithDGeoms("Intake Group");
+        GroupWithDGeoms leftIntakeGroup = new GroupWithDGeoms("Left Intake Group");
+        GroupWithDGeoms rightIntakeGroup = new GroupWithDGeoms("Right Intake Group");
+        PhongMaterial intakeMaterial = new PhongMaterial(Color.GREEN);
+
+        for (int i = 0; i<3; i++){
+            CylWithDGeom leftIntakeWheel = new CylWithDGeom(2.5, 5, fxBody,
+                    "Left Intake Wheel" + i,OdeHelper.createCylinder(botSpace, 2.5, 5));
+            leftIntakeWheel.setMaterial(intakeMaterial);
+            leftIntakeWheel.getTransforms().addAll(new Translate(-7.5, (1-i)*7.0, 0), new Rotate(90, Rotate.X_AXIS));
+            leftIntakeGroup.getChildren().add(leftIntakeWheel);
+            CylWithDGeom rightIntakeWheel = new CylWithDGeom(2.5, 5, fxBody,
+                    "Right Intake Wheel" + i,OdeHelper.createCylinder(botSpace, 2.5, 5));
+            rightIntakeWheel.setMaterial(intakeMaterial);
+            rightIntakeWheel.getTransforms().addAll(new Translate(7.5, (1-i)*7.0, 0), new Rotate(90, Rotate.X_AXIS));
+            rightIntakeGroup.getChildren().add(rightIntakeWheel);
+        }
+
+        BoxWithDGeom intakeRoof = new BoxWithDGeom(20, 21, 3, fxBody, "intakeRoof");
+        intakeRoof.setMaterial(new PhongMaterial(Color.color(0.1, 0, 0, 0)));
+        intakeRoof.getTransforms().add(new Translate(0, 0, 8 ));
+
+        intakeGroup.getChildren().addAll(leftIntakeGroup, rightIntakeGroup, intakeRoof);
+        intakeGroup.getTransforms().add(new Translate(0, -12, pltZOffset));
+
+        intakeGroup.updateGeomOffsets();
+
+        botGroup.getChildren().add(intakeGroup);
 
         zBase = 5.08;
+
+        fxBody.setCategoryBits(CBits.BOT);
+        fxBody.setCollideBits(0xFFF);
+        botBottomMesh.setCategoryBits(CBits.BOT_BOTTOM);
+        botBottomMesh.setCollideBits(CBits.FLOOR);
+        leftHand.getDGeom().setCategoryBits(CBits.BOT_HANDS | CBits.BOT_LEFT_HAND);
+        rightHand.getDGeom().setCategoryBits(CBits.BOT_HANDS | CBits.BOT_RIGHT_HAND);
+        for (Node n : leftIntakeGroup.getChildren()) {
+            ((CylWithDGeom) n).getDGeom().setCategoryBits(CBits.BOT_INTAKE | CBits.BOT_LEFT_INTAKE);
+        }
+        for (Node n: rightIntakeGroup.getChildren()) {
+            ((CylWithDGeom) n).getDGeom().setCategoryBits(CBits.BOT_INTAKE | CBits.BOT_RIGHT_INTAKE);
+        }
+        intakeRoof.getDGeom().setCategoryBits(CBits.BOT_INTAKE | CBits.BOT_INTAKE_ROOF);
 
     }
 
@@ -836,21 +908,69 @@ public class BetaBot extends VirtualBot {
     }
 
     public void handleContacts(int numContacts, DGeom o1, DGeom o2, DContactBuffer contacts, DJointGroup contactGroup){
+        long o1CBits = o1.getCategoryBits();
+        long o2CBits = o2.getCategoryBits();
+
+        boolean o1RH = (o1CBits & CBits.BOT_RIGHT_HAND) != 0,
+                o2RH = (o2CBits & CBits.BOT_RIGHT_HAND) != 0,
+                o1LH = (o1CBits & CBits.BOT_LEFT_HAND) != 0,
+                o2LH = (o2CBits & CBits.BOT_LEFT_HAND) != 0,
+                o1Block = (o1CBits & CBits.STONES) != 0,
+                o2Block = (o2CBits & CBits.STONES) != 0,
+                o1RtIntake = (o1CBits & CBits.BOT_RIGHT_INTAKE) != 0,
+                o2RtIntake = (o2CBits & CBits.BOT_RIGHT_INTAKE) != 0,
+                o1LtIntake = (o1CBits & CBits.BOT_LEFT_INTAKE) != 0,
+                o2LtIntake = (o2CBits & CBits.BOT_LEFT_INTAKE) != 0,
+                o1IntakeRoof = (o1CBits & CBits.BOT_INTAKE_ROOF) != 0,
+                o2IntakeRoof = (o2CBits & CBits.BOT_INTAKE_ROOF) != 0;
+
+        final double fudgeVerticalLiftSpeed = 0.1;
+
         for (int i=0; i<numContacts; i++)
         {
             DContact contact = contacts.get(i);
-            if ( o1.getData() == "hand right" && o2.getData() == "testBlock" || o1.getData() == "testBlock" && o2.getData() == "hand right"
-                    || o1.getData() == "hand left" && o2.getData() == "testBlock" || o1.getData() == "testBlock" && o2.getData() == "hand left"){
-                contact.surface.mode = dContactSoftERP | dContactSoftCFM;
-                contact.surface.mu = dInfinity;
-                if (o1.getData() == "testBlock") o1.getBody().addForce(0, 0, 980);
-                else o2.getBody().addForce(0, 0, 980);
-            } else {
-                contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1;
+            if ( o1RH && o2Block || o2RH && o1Block || o1LH && o2Block || o2LH && o1Block){
+                contact.fdir1.set(0, 0, 1);
+                contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactFDir1 | dContactMotion1 | dContactApprox1_1
+                        | dContactApprox1_2 | dContactApprox1_N | dContactRolling | dContactMotion2 | dContactMu2;
+                contact.surface.mu = 10;
+                contact.surface.mu2 = 10;
+                contact.surface.rhoN = 10;
+                contact.surface.soft_cfm = 0.0001;
+                contact.surface.soft_erp = 0.4;
+                if (o1Block) {
+                    contact.surface.motion1 = verticalLiftSpeed + fudgeVerticalLiftSpeed;
+                    contact.surface.motion2 = o2LH? -sliderSpeed : sliderSpeed;
+                } else {
+                    contact.surface.motion1 = -verticalLiftSpeed + fudgeVerticalLiftSpeed;
+                    contact.surface.motion2 = o1LH? sliderSpeed : -sliderSpeed;
+                }
+
+
+            } else if (o1LtIntake && o2Block || o2LtIntake && o1Block || o1RtIntake && o2Block || o2RtIntake && o1Block){
+                contact.fdir1.set(0, 0, 1);
+                contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactFDir1 | dContactMotion1 | dContactApprox1_1
+                        | dContactApprox1_2 | dContactApprox1_N | dContactRolling | dContactMotion2 | dContactMu2;
                 contact.surface.mu = 0;
+                contact.surface.mu2 = 5;
+                contact.surface.rhoN = 0;
+                contact.surface.soft_cfm = 0.0001;
+                contact.surface.soft_erp = 0.4;
+                if (o1Block) {
+                    contact.surface.motion2 = o2LtIntake? -leftIntakeSpeed : -rightIntakeSpeed;
+                } else {
+                    contact.surface.motion2 = o1LtIntake? leftIntakeSpeed : rightIntakeSpeed;
+                }
+
+
+            }  else {
+                contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactBounce;
+                contact.surface.mu = 0;
+                contact.surface.soft_cfm = 0.00000001;
+                contact.surface.soft_erp = 0.2;
+                contact.surface.bounce = 0.3;
+                contact.surface.bounce_vel = 10;
             }
-            contact.surface.soft_cfm = 0.0000001;
-            contact.surface.soft_erp = 0.2;
             DJoint c = OdeHelper.createContactJoint (controller.getWorld(),contactGroup,contact);
             c.attach (contact.geom.g1.getBody(), contact.geom.g2.getBody());
         }

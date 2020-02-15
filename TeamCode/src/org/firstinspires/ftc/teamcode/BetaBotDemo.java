@@ -32,6 +32,10 @@ public class BetaBotDemo extends LinearOpMode {
         DcMotor liftMotor = hardwareMap.dcMotor.get("lift_motor");
         liftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
+        DcMotor leftIntakeMotor = hardwareMap.dcMotor.get("left_intake_motor");
+        DcMotor rightIntakeMotor = hardwareMap.dcMotor.get("right_intake_motor");
+        rightIntakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+
         CRServo slideCRServo = hardwareMap.crservo.get("slider_crservo");
 
         BNO055IMU imu = hardwareMap.get(BNO055IMU.class, "imu");
@@ -89,6 +93,17 @@ public class BetaBotDemo extends LinearOpMode {
 
             if (gamepad1.x) handServo.setPosition(0.6);
             else if (gamepad1.b) handServo.setPosition(0);
+
+            if (gamepad1.dpad_up) {
+                leftIntakeMotor.setPower(0.5);
+                rightIntakeMotor.setPower(0.5);
+            } else if (gamepad1.dpad_down){
+                leftIntakeMotor.setPower(-0.5);
+                rightIntakeMotor.setPower(-0.5);
+            } else {
+                leftIntakeMotor.setPower(0);
+                rightIntakeMotor.setPower(0);
+            }
 
             telemetry.addData("Gamepad 1 left stick controls fwd/strafe.","");
             telemetry.addData("Gamepad 1 triggers control turn.","");

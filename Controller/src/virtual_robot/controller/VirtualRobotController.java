@@ -10,7 +10,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
-import javafx.geometry.Point3D;
 import javafx.scene.*;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseDragEvent;
@@ -19,14 +18,13 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
-import javafx.scene.shape.Cylinder;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.util.Callback;
+import odefx.CBits;
 import odefx.FxBody;
-import odefx.FxBodyHelper;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.ode4j.ode.*;
 import org.reflections.Reflections;
@@ -44,7 +42,6 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.hardware.DcMotorImpl;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import virtual_robot.controller.robots.BetaBot;
-import virtual_robot.controller.robots.MechanumBot;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -942,7 +939,7 @@ public class VirtualRobotController {
         world.setGravity(0, 0, -980);
         world.setQuickStepNumIterations(12);
         world.setERP(0.8);
-        world.setContactSurfaceLayer(0.1);
+        world.setContactSurfaceLayer(0);
         System.out.println("Original damping: " + world.getLinearDamping() + "  " + world.getAngularDamping());
         world.setLinearDamping(0.01);
         world.setAngularDamping(0.1);
@@ -992,12 +989,12 @@ public class VirtualRobotController {
             for (int i=0; i<n; i++)
             {
                 DContact contact = contacts.get(i);
-                contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1;      //Enable bounce
-                contact.surface.bounce = 0;
-                contact.surface.bounce_vel = 0.1;
-                contact.surface.mu = 1.0;
+                contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactBounce;      //Enable bounce
+                contact.surface.bounce = 0.5;
+                contact.surface.bounce_vel = 2.0;
+                contact.surface.mu = 0.5;
                 contact.surface.soft_cfm = 0;
-                contact.surface.soft_erp = 0.2;
+                contact.surface.soft_erp = 0.1;
                 DJoint c = OdeHelper.createContactJoint (world,contactGroup,contact);
                 c.attach (contact.geom.g1.getBody(), contact.geom.g2.getBody());
             }
@@ -1102,19 +1099,20 @@ public class VirtualRobotController {
 
         fieldPlane = OdeHelper.createPlane(space, 0, 0, 1, 0);
         fieldPlane.setData("Field Plane");
+        fieldPlane.setCategoryBits(CBits.FLOOR);
 
         DSpace bridgeSpace = OdeHelper.createSimpleSpace(space);
         Group bridgeGroup = Parts.skyStoneBridge(bridgeSpace);
-        DAABBC daabbc = bridgeSpace.getAABB();
-        System.out.printf("Bridge Group Bounding Box: xMin = %.1f  xMax = %.1f  yMin = %.1f  yMax = %.1f  zMin = %.1f  zMax = %.1f\n",
-                daabbc.getMin0(), daabbc.getMax0(), daabbc.getMin1(), daabbc.getMax1(), daabbc.getMin2(), daabbc.getMax2());
+        for (DGeom g: bridgeSpace.getGeoms()){
+            g.setCategoryBits(CBits.BRIDGE);
+        }
 
         subSceneGroup.getChildren().add(bridgeGroup);
 
         testBlock = FxBody.newInstance(world, space);
         DMass testBlockMass = OdeHelper.createMass();
         testBlockMass.setBox(1, 20, 10, 10);
-        testBlockMass.setMass(100);
+        testBlockMass.setMass(50);
         testBlock.setMass(testBlockMass);
         Box testBlockBox = new Box(20, 10, 10);
         testBlockBox.setMaterial(new PhongMaterial(Color.YELLOW));
@@ -1122,6 +1120,8 @@ public class VirtualRobotController {
         testBlock.setNode(testBlockBox, true);
         testBlock.getFirstGeom().setData("testBlock");
         testBlock.setPosition(0, -80, 20);
+        testBlock.setCategoryBits(CBits.STONES);
+        testBlock.setCollideBits(0xFF);
 
 
     }

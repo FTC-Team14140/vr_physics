@@ -1,4 +1,4 @@
-package odefx;
+package odefx.node_with_geom;
 
 import javafx.collections.ObservableList;
 import javafx.geometry.Point3D;
@@ -12,13 +12,13 @@ import javafx.scene.transform.Translate;
 import org.ode4j.math.DMatrix3;
 import org.ode4j.ode.DGeom;
 
-public class GroupOde extends Group {
+public class GroupWithDGeoms extends Group {
 
-    public GroupOde(){
+    public GroupWithDGeoms(){
         super();
     }
 
-    public GroupOde(String id){
+    public GroupWithDGeoms(String id){
         super();
         this.setId(id);
     }
@@ -30,16 +30,19 @@ public class GroupOde extends Group {
         for (int i=0; i<transforms.size(); i++) transform = transform.createConcatenation(transforms.get(i));
 
         for (Node node: getChildren()){
-            if ( !(node instanceof GroupOde) && !(node instanceof HasDGeom)) continue;
+            if ( !(node instanceof GroupWithDGeoms) && !(node instanceof Shape3DWithDGeom)) continue;
 
-            if (node instanceof GroupOde){
-                ((GroupOde)node).updateGeomOffsets(transform);
+            if (node instanceof GroupWithDGeoms){
+                ((GroupWithDGeoms)node).updateGeomOffsets(transform);
             } else {
                 Transform nodeTransform = transform.clone();
                 ObservableList<Transform> nodeTransforms = node.getTransforms();
                 for (int i=0; i<nodeTransforms.size(); i++) nodeTransform = nodeTransform.createConcatenation(nodeTransforms.get(i));
-
-                DGeom dGeom = ((HasDGeom)node).getDGeom();
+                Rotate nodeRelGeomRotation = ((Shape3DWithDGeom)node).getRelGeomRotation();
+                Translate nodeRelGeomOffset = ((Shape3DWithDGeom)node).getRelGeomOffset();
+                if (nodeRelGeomOffset != null) nodeTransform = nodeTransform.createConcatenation(nodeRelGeomOffset);
+                if (nodeRelGeomRotation != null) nodeTransform = nodeTransform.createConcatenation(nodeRelGeomRotation);
+                DGeom dGeom = ((Shape3DWithDGeom)node).getDGeom();
                 if (node instanceof Cylinder) {
                     nodeTransform = nodeTransform.createConcatenation(new Rotate(90, new Point3D(1, 0, 0)));
                 }
@@ -53,26 +56,6 @@ public class GroupOde extends Group {
         }
     }
 
-    public void printGeoms(){
-
-        if (this.getId() != null && !this.getId().isEmpty()){
-            System.out.println(this.getId());
-        } else {
-            System.out.println("GroupOde: NO ID");
-        }
-
-        System.out.println();
-
-        for (Node n: this.getChildren()){
-            if (n instanceof GroupOde){
-                ((GroupOde) n).printGeoms();
-            } else if (n instanceof HasDGeom){
-                if (n.getId() != null && !n.getId().isEmpty()) System.out.print(n.getId() + ": " + n.getClass().getName() + " " + ((HasDGeom)n).getDGeom().getAABB().toString());
-                else System.out.print("No Id: " + n.getClass().getName() + " " + ((HasDGeom)n).getDGeom().getAABB().toString());
-                System.out.println();
-            }
-        }
-    }
 
     public void updateGeomOffsets(){
         updateGeomOffsets(null);

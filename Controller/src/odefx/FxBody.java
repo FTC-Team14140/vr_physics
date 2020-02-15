@@ -194,10 +194,8 @@ public class FxBody {
      * @param bits
      */
     public void setCategoryBits(long bits){
-        DGeom dGeom = dBody.getFirstGeom();
-        while (dGeom != null) {
-            dGeom.setCategoryBits(bits);
-            dGeom = dBody.getNextGeom(dGeom);
+        for (DGeom g: getGeoms()){
+            g.setCategoryBits(bits);
         }
     }
 
@@ -206,10 +204,8 @@ public class FxBody {
      * @param bits
      */
     public void setCollideBits(long bits){
-        DGeom dGeom = dBody.getFirstGeom();
-        while (dGeom != null) {
-            dGeom.setCollideBits(bits);
-            dGeom = dBody.getNextGeom(dGeom);
+        for (DGeom g: getGeoms()){
+            g.setCollideBits(bits);
         }
     }
 
@@ -339,7 +335,7 @@ public class FxBody {
         dBody.setRotation(R);
         if (setChildRot){
             DMatrix3 invOldRot = new DMatrix3();
-            if (!DMatrix.dInvertPDMatrix(oldRot, invOldRot)) System.out.println("Matrix inversion failed");
+            DMatrix.dInvertPDMatrix(oldRot, invOldRot);
             for (FxBody child: children){
                 DMatrix3 newRotTimesInvOldRot = new DMatrix3();
                 DMatrix.dMultiply0(newRotTimesInvOldRot, R, invOldRot);
@@ -367,7 +363,7 @@ public class FxBody {
         dBody.setQuaternion(q);
         if (setChildRot){
             DMatrix3 invOldRot = new DMatrix3();
-            if (!DMatrix.dInvertPDMatrix(oldRot, invOldRot)) System.out.println("Matrix inversion failed");
+            DMatrix.dInvertPDMatrix(oldRot, invOldRot);
             for (FxBody child: children){
                 DMatrix3 newRot = new DMatrix3();
                 DRotation.dRfromQ(newRot, q);
