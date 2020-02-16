@@ -1,6 +1,6 @@
 # NEW:  Now using ODE4J (Java port of Open Dynamics Engine) to make the 3D simulator phyics based.
 
-![](/readme_image.jpg)
+![](/readme_image.JPG)
 
 **Some older hardware doesn't support Java FX 3D scenes.**  This runs on several circa 2015-16 Windows 10 and 8 systems
 we have tested on, but not on a 2008 laptop (which was originally Vista, now Windows 10). If your system does not
