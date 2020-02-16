@@ -106,7 +106,7 @@ public class FxBodyHelper {
         if (shape instanceof Box) dGeom = dBoxFromBox((Box)shape, space);
         else if (shape instanceof Sphere) dGeom = dSphereFromSphere((Sphere)shape, space);
         else if (shape instanceof Cylinder) dGeom = dCylinderFromCylinder((Cylinder)shape, space);
-        else if (shape instanceof DTriMesh) dGeom = dTriMeshFromMeshView((MeshView)shape, space);
+        else if (shape instanceof MeshView) dGeom = dTriMeshFromMeshView((MeshView)shape, space);
         else return null;
         return dGeom;
     }

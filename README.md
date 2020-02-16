@@ -1,5 +1,4 @@
-# NEW:  Using ODE4J to make the 3D simulator phyics based.
-# WORK IN PROGRESS -- NOT YET FUNCTIONAL
+# NEW:  Now using ODE4J (Java port of Open Dynamics Engine) to make the 3D simulator phyics based.
 
 ![](/readme_image.jpg)
 

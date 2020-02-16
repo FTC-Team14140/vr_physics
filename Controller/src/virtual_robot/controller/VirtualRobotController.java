@@ -25,6 +25,7 @@ import javafx.scene.transform.Translate;
 import javafx.util.Callback;
 import odefx.CBits;
 import odefx.FxBody;
+import odefx.FxBodyHelper;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.ode4j.ode.*;
 import org.reflections.Reflections;
@@ -42,6 +43,8 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.hardware.DcMotorImpl;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import virtual_robot.controller.robots.BetaBot;
+import virtual_robot.ftcfield.FtcField;
+import virtual_robot.ftcfield.SkyStoneField;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -69,6 +72,7 @@ public class VirtualRobotController {
     @FXML private CheckBox checkBoxGamePad2;
     @FXML private BorderPane borderPane;
     @FXML private GridPane cameraGrid;
+    @FXML private Button btnResetField;
 
     //JavaFx subscene and the group that will hold all of the subscene content
     private SubScene subScene;
@@ -83,11 +87,11 @@ public class VirtualRobotController {
 
     private DJointGroup contactGroup;
 
-    // fieldPlane is the DGeom that serves as the floor for collision purposes
-    DPlane fieldPlane;
-
     //Test Block
-    FxBody testBlock;
+//    FxBody testBlock;
+//    FxBody[] testBlocks = new FxBody[12];
+
+    private FtcField ftcField;
 
     //Callback object for collision detection; it just calls the nearCallback method.
     private DGeom.DNearCallback nearCallback = new DGeom.DNearCallback() {
@@ -112,7 +116,7 @@ public class VirtualRobotController {
     VirtualGamePadController virtualGamePadController = null;
 
     //Background Image and Field
-    private Image backgroundImage = Config.BACKGROUND;
+    private final Image backgroundImage = Config.BACKGROUND;
     private PixelReader pixelReader = backgroundImage.getPixelReader();
 
     public static final double FIELD_WIDTH = 365.76;    // meters
@@ -166,7 +170,9 @@ public class VirtualRobotController {
     public void initialize() {
         setupODE();
         setUp3DSubScene();
-        createField();
+//        createField();
+        ftcField = new SkyStoneField(subSceneGroup, world, space);
+        ftcField.setup();
         currentCameraButton = (Button)getNodeByGridPaneIndex(cameraGrid, 1, 1);
         OpMode.setVirtualRobotController(this);
         VirtualBot.setController(this);
@@ -418,7 +424,8 @@ public class VirtualRobotController {
 
     private synchronized void updateDisplay(){
         bot.updateDisplay();
-        testBlock.updateNodeDisplay();
+//        for (int i=0; i<testBlocks.length; i++) testBlocks[i].updateNodeDisplay();
+        ftcField.updateDisplay();
         updateTelemetryDisplay();
     }
 
@@ -597,7 +604,12 @@ public class VirtualRobotController {
             double tempBlue = 0.0;
             for (int row = colorY-4; row < colorY+5; row++)
                 for (int col = colorX - 4; col < colorX+5; col++){
-                    Color c = pixelReader.getColor(col, row);
+                    Color c;
+                    try {
+                        c = pixelReader.getColor(col, row);
+                    } catch (Exception exc){
+                        return;
+                    }
                     tempRed += c.getRed();
                     tempGreen += c.getGreen();
                     tempBlue += c.getBlue();
@@ -648,16 +660,16 @@ public class VirtualRobotController {
             else switch (side){
                 case 2:
                 case -2:
-                    distanceMM = (y + HALF_FIELD_WIDTH) * 1000.0;
+                    distanceMM = (y + HALF_FIELD_WIDTH) * 10.0;
                     break;
                 case -1:
-                    distanceMM = (HALF_FIELD_WIDTH - x) * 1000.0;
+                    distanceMM = (HALF_FIELD_WIDTH - x) * 10.0;
                     break;
                 case 0:
-                    distanceMM = (HALF_FIELD_WIDTH - y) * 1000.0;
+                    distanceMM = (HALF_FIELD_WIDTH - y) * 10.0;
                     break;
                 case 1:
-                    distanceMM = (x + HALF_FIELD_WIDTH) * 1000.0;
+                    distanceMM = (x + HALF_FIELD_WIDTH) * 10.0;
                     break;
             }
         }
@@ -824,6 +836,11 @@ public class VirtualRobotController {
             controller.quitSDLGamepad();
         }
 
+    }
+
+    @FXML private void handleBtnResetFieldAction(ActionEvent event){
+        if (opModeStarted || opModeInitialized) return;
+        ftcField.reset();
     }
 
     @FXML public void handleLightButtonAction(ActionEvent event){
@@ -1066,64 +1083,5 @@ public class VirtualRobotController {
 
     }
 
-    /**
-     * Create the playing field including floor, walls (if using), and any immobile elements (e.g., the bridge in
-     * SkyStone).
-     */
-    private void createField(){
-
-        TriangleMesh fieldMesh = Util3D.getParametricMesh(-HALF_FIELD_WIDTH, HALF_FIELD_WIDTH,-HALF_FIELD_WIDTH, HALF_FIELD_WIDTH,
-                10, 10, false, false, new Util3D.Param3DEqn() {
-                    @Override
-                    public float x(float s, float t) {
-                        return s;
-                    }
-
-                    @Override
-                    public float y(float s, float t) {
-                        return t;
-                    }
-
-                    @Override
-                    public float z(float s, float t) {
-                        return 0;
-                    }
-                });
-        MeshView fieldView = new MeshView(fieldMesh);
-        PhongMaterial fieldMaterial = new PhongMaterial();
-        fieldMaterial.setDiffuseColor(Color.gray(0.02));
-        fieldMaterial.setDiffuseMap(backgroundImage);
-        fieldMaterial.setSelfIlluminationMap(backgroundImage);
-        fieldView.setMaterial(fieldMaterial);
-        subSceneGroup.getChildren().add(fieldView);
-
-        fieldPlane = OdeHelper.createPlane(space, 0, 0, 1, 0);
-        fieldPlane.setData("Field Plane");
-        fieldPlane.setCategoryBits(CBits.FLOOR);
-
-        DSpace bridgeSpace = OdeHelper.createSimpleSpace(space);
-        Group bridgeGroup = Parts.skyStoneBridge(bridgeSpace);
-        for (DGeom g: bridgeSpace.getGeoms()){
-            g.setCategoryBits(CBits.BRIDGE);
-        }
-
-        subSceneGroup.getChildren().add(bridgeGroup);
-
-        testBlock = FxBody.newInstance(world, space);
-        DMass testBlockMass = OdeHelper.createMass();
-        testBlockMass.setBox(1, 20, 10, 10);
-        testBlockMass.setMass(50);
-        testBlock.setMass(testBlockMass);
-        Box testBlockBox = new Box(20, 10, 10);
-        testBlockBox.setMaterial(new PhongMaterial(Color.YELLOW));
-        subSceneGroup.getChildren().add(testBlockBox);
-        testBlock.setNode(testBlockBox, true);
-        testBlock.getFirstGeom().setData("testBlock");
-        testBlock.setPosition(0, -80, 20);
-        testBlock.setCategoryBits(CBits.STONES);
-        testBlock.setCollideBits(0xFF);
-
-
-    }
 
 }

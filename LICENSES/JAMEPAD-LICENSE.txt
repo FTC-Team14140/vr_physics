@@ -1,4 +1,5 @@
-Jamepad
+JAMEPAD LICENSE
+
 Copyright (C) 2016 William Hartman
 
 This software is provided 'as-is', without any express or implied

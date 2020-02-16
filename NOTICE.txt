@@ -1,7 +1,7 @@
 Copyright 2019 Team Beta
 
    Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
+   you may not use this software except in compliance with the License.
    You may obtain a copy of the License at
 
        http://www.apache.org/licenses/LICENSE-2.0
@@ -12,15 +12,43 @@ Copyright 2019 Team Beta
    See the License for the specific language governing permissions and
    limitations under the License.
 
-   This product includes:
 
-   Jamepad software (Copyright 2016, William Hartman), to support gamepad use.
+This product includes:
 
-   Guava: Google Core Libraries for Java (Copyright 2017, Google, Inc.), Licensed under Apache License, Version 2.0
+    Jamepad software, Copyright (c) 2016, William Hartman, to support gamepad use. License is attached.
 
-   Reflections Library for Java
+    Guava: Google Core Libraries for Java, Copyright (c) 2017, Google, Inc., Licensed under Apache License, Version 2.0 (License is attached)
 
-   Javassist software (Copyright 1999-2019, Shigeru Chiba), Licensed under Apache License, Version 2.0
+    Reflections Library for Java, Copyright (c) 2004 Sam Hocevar, Licensed under the Do What the *&$# You Want to Public License
+
+    Javassist software, Copyright (c) 1999-2019, Shigeru Chiba, Licensed under Apache License, Version 2.0 (License is attached)
+   
+    Ode4j, Copyright (c) 2009-2017 Tilmann Zaeschke, Licensed under BSD 3-clause License (License is attached)
+   
+Ode4j contains Java ports of:
+  
+	ODE, Copyright (c) 2001-2004 Russell L. Smith, Licensed under BSD 3-clause License (License is attached)
+  
+	GIMPACT, Copyright (c) 2006 Francisco Leon, Licensed under BSD 3-clause License (License is attached)
+		
+	LIBCCD, Copyright (c) 2010-2012 Daniel Fiser, Licensed under BSD 3-clause License (License is attached)
+		
+	Turbulenz Engine, Copyright (c) 2009-2014 Turbulenz Limited, Licensed under MIT License (License is attached)
+	
+Ode4j uses:
+		
+	JUnit, Copyright (c) 2002-2020 JUnit, Licensed under Eclipse Public License v. 1 (License is attached)
+	    Source code for JUnit available: github.com/junit-team
+		
+	slf4j, Copyright (c) 2004-2017 QOS.ch, Licensed under MIT License (License is attached)
+		
+
+		
+		
+		
+		
+   
+		
 
 
 
