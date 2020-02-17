@@ -137,7 +137,7 @@ public abstract class VirtualBot {
     public double[] getPosition(){
         DVector3C pos = fxBody.getPosition();
         DMatrix3C rot = fxBody.getRotation();
-        double theta = Math.atan2( rot.get10(), rot.get00());
+        double theta = Math.abs(rot.get22()) > 0.5?  Math.atan2( rot.get10(), rot.get00()) : 0;
         return new double[] {pos.get0(), pos.get1(), theta};
     }
 
@@ -197,6 +197,10 @@ public abstract class VirtualBot {
     public void addToDisplay(){
         subSceneGroup.getChildren().add(fxBody.getNode());
         for (FxBody fb: fxBody.getChildren()) subSceneGroup.getChildren().add(fb.getNode());
+    }
+
+    public void destroyBody(){
+        fxBody.destroy(true);
     }
 
     public HardwareMap getHardwareMap(){ return hardwareMap; }

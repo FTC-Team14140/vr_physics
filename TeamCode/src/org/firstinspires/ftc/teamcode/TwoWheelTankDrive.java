@@ -13,7 +13,6 @@ public class TwoWheelTankDrive extends OpMode {
     private DcMotor right = null;
     private DcMotor armExtensionMotor = null;
     private DcMotor armRotationMotor = null;
-    private GyroSensor gyro = null;
     private Servo fingerServo = null;
     private ColorSensor colorSensor = null;
     private DistanceSensor frontDistance = null;
@@ -30,9 +29,7 @@ public class TwoWheelTankDrive extends OpMode {
         left.setDirection(DcMotor.Direction.REVERSE);
         armExtensionMotor = hardwareMap.dcMotor.get("arm_extension_motor");
         armRotationMotor = hardwareMap.dcMotor.get("arm_rotation_motor");
-        gyro = hardwareMap.gyroSensor.get("gyro_sensor");
         fingerServo = hardwareMap.servo.get("finger_servo");
-        gyro.init();
         colorSensor = hardwareMap.colorSensor.get("color_sensor");
         frontDistance = hardwareMap.get(DistanceSensor.class, "front_distance");
         leftDistance = hardwareMap.get(DistanceSensor.class, "left_distance");
@@ -63,7 +60,6 @@ public class TwoWheelTankDrive extends OpMode {
         telemetry.addData("Gamepad 2 sticks control arm", "");
         telemetry.addData("Gamepad 2 X and B control fingers.","");
         telemetry.addData("Color","R %d  G %d  B %d", colorSensor.red(), colorSensor.green(), colorSensor.blue());
-        telemetry.addData("Heading"," %.1f", gyro.getHeading());
         telemetry.addData("Encoders","Left %d  Right %d", left.getCurrentPosition(), right.getCurrentPosition());
         telemetry.addData("Distance", " Fr %.1f  Lt %.1f  Rt %.1f  Bk %.1f  ",
                 frontDistance.getDistance(DistanceUnit.CM), leftDistance.getDistance(DistanceUnit.CM),

@@ -199,6 +199,32 @@ public class FxBody {
         }
     }
 
+    public void destroy(boolean destroyChildren){
+        //First, destroy all of the dgeoms
+        List<DGeom> dGeoms = new ArrayList<>();
+        for (DGeom g: getGeoms()) dGeoms.add(g);
+        for (int i=0; i<dGeoms.size(); i++){
+            DGeom g = dGeoms.get(i);
+            if (g.getSpace() != null) g.getSpace().remove(g);
+            g.destroy();
+        }
+
+        //Next, destroy all of the joints
+        List<DJoint> joints = new ArrayList<>();
+        int numJoints = dBody.getNumJoints();
+        for (int i=0; i<numJoints; i++){
+            dBody.getJoint(i).destroy();
+        }
+
+        //Next, destroy all of the children (if requested)
+        if (destroyChildren) {
+            for (int i = 0; i < children.size(); i++) children.get(i).destroy(true);
+        }
+
+        //Finally, destroy the DBody
+        dBody.destroy();
+    }
+
     /**
      * Set collide bits to the same value for all geoms belonging to this FxBody
      * @param bits

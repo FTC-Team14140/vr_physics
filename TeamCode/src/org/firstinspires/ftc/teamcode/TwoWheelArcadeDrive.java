@@ -19,7 +19,7 @@ public class TwoWheelArcadeDrive extends LinearOpMode {
     DcMotor armRotationMotor;
     Servo fingerServo;
     ColorSensor colorSensor;
-    GyroSensor gyro;
+//    GyroSensor gyro;
     DistanceSensor frontDistance, leftDistance, backDistance, rightDistance;
 
     public void runOpMode(){
@@ -30,8 +30,8 @@ public class TwoWheelArcadeDrive extends LinearOpMode {
         armRotationMotor = hardwareMap.dcMotor.get("arm_rotation_motor");
         fingerServo = hardwareMap.servo.get("finger_servo");
         colorSensor = hardwareMap.colorSensor.get("color_sensor");
-        gyro = hardwareMap.gyroSensor.get("gyro_sensor");
-        gyro.init();
+//        gyro = hardwareMap.gyroSensor.get("gyro_sensor");
+//        gyro.init();
         frontDistance = hardwareMap.get(DistanceSensor.class, "front_distance");
         leftDistance = hardwareMap.get(DistanceSensor.class, "left_distance");
         backDistance = hardwareMap.get(DistanceSensor.class, "back_distance");
@@ -40,10 +40,13 @@ public class TwoWheelArcadeDrive extends LinearOpMode {
 
         telemetry.addData("Press Start When Ready","");
         telemetry.update();
+
+        gamepad1.setJoystickDeadzone(0.05f);
+
         waitForStart();
         while (opModeIsActive()){
             float fwd = -gamepad1.left_stick_y;
-            float steer = gamepad1.left_stick_x;
+            float steer = gamepad1.left_trigger - gamepad1.right_trigger;
             float leftPower = fwd - steer;
             float rightPower = fwd + steer;
             float scale = (float)Math.max(1.0, Math.max(Math.abs(leftPower), Math.abs(rightPower)));
@@ -61,11 +64,13 @@ public class TwoWheelArcadeDrive extends LinearOpMode {
             if (gamepad1.x) fingerServo.setPosition(1);
             else if (gamepad1.b) fingerServo.setPosition(0);
 
-            telemetry.addData("Gamepad 1 left stick controls drive","");
-            telemetry.addData("GP1 Rt. Stick-Y controls arm rotation","");
-            telemetry.addData("Gamepad 1 X and B control fingers.","");
+            telemetry.addData("GP1 Lt Stick Y"," Fwd/Rev");
+            telemetry.addData("GP1 Triggers", " Turning");
+            telemetry.addData("GP1 Rt. Stick-Y"," Arm rotation");
+            telemetry.addData("GP1 Y and A", " Arm Extension");
+            telemetry.addData("Gamepad 1 X and B"," Fingers");
             telemetry.addData("Color","R %d  G %d  B %d", colorSensor.red(), colorSensor.green(), colorSensor.blue());
-            telemetry.addData("Heading"," %.1f", gyro.getHeading());
+//            telemetry.addData("Heading"," %.1f", gyro.getHeading());
             telemetry.addData("Encoders","Left %d  Right %d", left.getCurrentPosition(), right.getCurrentPosition());
             telemetry.addData("Distance", " Fr %.1f  Lt %.1f  Rt %.1f  Bk %.1f  ",
                     frontDistance.getDistance(DistanceUnit.CM), leftDistance.getDistance(DistanceUnit.CM),

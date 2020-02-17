@@ -213,7 +213,7 @@ public class BetaBot extends VirtualBot {
         double t = millis / 1000.0;
         double tSqr = t * t;
         DVector3 deltaPos = new DVector3(dX, dY, 0);
-        DVector3C vel = fxBody.getLinearVel();
+        DVector3C vel = fxBody.getLinearVel().clone();
         ((DVector3)vel).set2(0);
         DVector3 force = deltaPos.reSub(vel.reScale(t)).reScale(2.0 * TOTAL_MASS / tSqr);
         double angVel = fxBody.getAngularVel().get2();
@@ -260,10 +260,6 @@ public class BetaBot extends VirtualBot {
          * Update state of robot accessories
          */
 
-
-
-//        double newHandRotation = handServo.getInternalPosition() * 180.0 - 90.0;
-//        handRotation = Math.min(30, Math.max(-5, newHandRotation));
 
         double newHandTranslation = handServo.getInternalPosition() * 4.0;
         handTranslation = newHandTranslation;
@@ -822,7 +818,6 @@ public class BetaBot extends VirtualBot {
         leftHand.setMaterial(new PhongMaterial(Color.color(0.6, 0, 0.6, 0.5)));
         leftHand.getTransforms().addAll(new Translate(-8, 0.2*sliderLength, -tetrixWidth/2-18), leftHandTranslate);
         slideGroup.getChildren().add(leftHand);
-//        BoxOde rightHand = new BoxOde(0.4, 12.5, 16, fxBody, "hand right");
         BoxWithDGeom rightHand = new BoxWithDGeom(0.4, 12.5, 16, fxBody, OdeHelper.createBox(1, 12.5, 16));
         rightHand.setRelGeomOffset(new Translate(-0.3, 0, 0));
         rightHand.setMaterial(new PhongMaterial(Color.color(0.6, 0, 0.6, 0.5)));
@@ -893,7 +888,6 @@ public class BetaBot extends VirtualBot {
     public synchronized void updateDisplay(){
         super.updateDisplay();
         for (int i=0; i<4; i++) wheelRotates[i].setAngle(wheelRotations[i]);
-//        handRotate.setAngle(handRotation);
         leftHandTranslate.setX(handTranslation);
         rightHandTranslate.setX(-handTranslation);
         for (int i=0; i<3; i++) liftTranslates[i].setZ(liftElevation/3.0);

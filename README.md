@@ -11,18 +11,15 @@ A 3D simulator to help beginning Java programmers learn to program for FTC Robot
 This is a JavaFX application developed using the (free) IntelliJ IDEA Community Edition IDE. The repository can be downloaded
 and unzipped, then opened with IntelliJ.
 
-Four robot configurations are available, the first three of which are: a simple two-wheeled robot, a robot with
-four mechanum wheels, and an X-Drive robot with four OmniWheels mounted at 45 degrees at each corner of the robot.
-Each of these three robots has an rotating/extending arm attached to the back, controlled by DC motors. There is a
-grabber at the end of the arm that is controlled by a servo. The fourth robot configuration is "BetaBot". This
-is a mechanum-wheeled robot with a vertical lift, horizontal slider, and grabbing mechanism.
+A single robot configuration is currently available for the physics-based 3D simulator: BetaBot. It is a mechanum-wheeled
+robot with a wheeled intake in back and a vertical lift with horizontal slider and grabbing mechanism in front. It
+can be thought of as 18 inches wide. The distance between the centers of the front and back wheels is 14 inches, and
+the distance between the centers of the right and left wheels is 16 inches.There is a downward-facing color sensor in
+the center of the robot. A BNO055 imu is included. It also has distance sensors on all four sides. Wheel diameters
+are all 4 inches.
 
-Each robot can be thought of as 18 inches wide.  For the two-wheel bot and mecanum wheel bots, the distance between
-the centers of the right and left wheels is 16 inches. For the mecanum wheel bots, the distance between the centers
-of the front and back wheels is 14 inches, and the mecanum wheels (when viewed from the top) have an "X" configuration.
-For the X-Drive bot, the distance between the centers of any two adjacent wheels is 14.5 inches. Each motor has an
-encoder. There is a downward-facing color sensor in the center of the robot. A gyro sensor (or BNO055 imu) is also included.
-Each robot also has distance sensors on the front, left, right and back sides. Wheel diameters are all 4 inches.
+The other robot configurations offered in the non-physics-based simulator (two-wheeled bot and X-Drive bot)
+will eventually be added.
 
 The field can be thought of as 12 feet wide. The field graphic (currently the Skystone field)
 is obtained from a bitmap (.bmp) image. The color sensor detects the field color beneath the center of the
@@ -71,6 +68,10 @@ To use:
 
 
 LOG OF CHANGES
+
+CHANGES 2/16/2020
+    Modified to use the Ode4J (a Java port of the ODE physics engine) for physics-based simulation, including
+    intake and manipulation of stones by the robot.
 
 CHANGES 1/7/2020
     Added 3D Utilities to make creation of robot configurations easier. Changed appearance of mechanum bot. Changed

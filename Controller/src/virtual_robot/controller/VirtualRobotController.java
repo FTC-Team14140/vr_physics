@@ -352,7 +352,11 @@ public class VirtualRobotController {
     @FXML
     public void setConfig(ActionEvent event){
         if (opModeInitialized || opModeStarted) return;
-        if (bot != null) bot.removeFromDisplay();
+        if (bot != null) {
+            bot.removeFromDisplay();
+            bot.destroyBody();
+            bot.getBotSpace().destroy();
+        }
         bot = getVirtualBotInstance(cbxConfig.getValue());
         if (bot == null) System.out.println("Unable to get VirtualBot Object");
         hardwareMap = bot.getHardwareMap();
@@ -424,7 +428,6 @@ public class VirtualRobotController {
 
     private synchronized void updateDisplay(){
         bot.updateDisplay();
-//        for (int i=0; i<testBlocks.length; i++) testBlocks[i].updateNodeDisplay();
         ftcField.updateDisplay();
         updateTelemetryDisplay();
     }
