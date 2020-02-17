@@ -11,15 +11,16 @@ A 3D simulator to help beginning Java programmers learn to program for FTC Robot
 This is a JavaFX application developed using the (free) IntelliJ IDEA Community Edition IDE. The repository can be downloaded
 and unzipped, then opened with IntelliJ.
 
-A single robot configuration is currently available for the physics-based 3D simulator: BetaBot. It is a mechanum-wheeled
+Two robot configurations are currently available for the physics-based 3D simulator: BetaBot is a mechanum-wheeled
 robot with a wheeled intake in back and a vertical lift with horizontal slider and grabbing mechanism in front. It
 can be thought of as 18 inches wide. The distance between the centers of the front and back wheels is 14 inches, and
-the distance between the centers of the right and left wheels is 16 inches.There is a downward-facing color sensor in
-the center of the robot. A BNO055 imu is included. It also has distance sensors on all four sides. Wheel diameters
-are all 4 inches.
+the distance between the centers of the right and left wheels is 16 inches. Two-wheeled Bot is a robot with one
+drive wheel on each side. The distance between the centers of the wheels is 16 inches. Each robot has a downward-facing
+color sensor in the center of the robot. Each has a BNO055 IMU, as well as distance sensors on all four sides.
+Wheel diameters for both robots are 4 inches.
 
-The other robot configurations offered in the non-physics-based simulator (two-wheeled bot and X-Drive bot)
-will eventually be added.
+Programming the interaction between the robot accessories (intake, lift/slide/grabber, arm/grabber) has proved tricky,
+and is a work in progress. It works better for BetaBot than for the Two-wheeled Bot.
 
 The field can be thought of as 12 feet wide. The field graphic (currently the Skystone field)
 is obtained from a bitmap (.bmp) image. The color sensor detects the field color beneath the center of the
