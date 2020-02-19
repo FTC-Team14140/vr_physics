@@ -437,7 +437,7 @@ public class TwoWheelBot extends VirtualBot {
                 contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactBounce;
                 contact.surface.mu = 0;
                 contact.surface.soft_cfm = 0.00000001;
-                contact.surface.soft_erp = 0.2;
+                contact.surface.soft_erp = 0.8;
                 contact.surface.bounce = 0.3;
                 contact.surface.bounce_vel = 10;
             }

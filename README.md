@@ -1,4 +1,4 @@
-# NEW:  Now using ODE4J (Java port of Open Dynamics Engine) to make the 3D simulator phyics based.
+# NEW:  Now using ODE4J (Java port of Open Dynamics Engine) to make the 3D simulator physics based.
 
 ![](/readme_image.JPG)
 
@@ -44,13 +44,13 @@ The OpMode (and therefore LinearOpMode) class in the simulator provides access t
 Several example OpModes are provided in the org.firstinspires.ftc.teamcode package.
 
 New robot configurations can be created by extending the VirtualBot class; this requires some familiarity with the
-JavaFX 3D API. Questions about this are welcome (via "Issues").
+JavaFX 3D API and the Ode4J API. Questions about this are welcome (via "Issues").
 
 To use:
 
   1. Make sure you have the Java 8 JDK installed on your PC. Also, install the free Community Edition of JetBrains
      IntelliJ IDEA.
-  2. Download the virtual_robot_3D.zip, and extract contents. Open the project in IntelliJ. You'll see three modules in
+  2. Download the vr_physics.zip, and extract contents. Open the project in IntelliJ. You'll see three modules in
      the project (Controller, TeamCode, and virtual_robot) -- the only module you'll need to touch is TeamCode. It
      contains the org.firstinspires.ftc.teamcode package.
   3. Write your OpModes in the org.firstinspires.ftc.teamcode package; make sure to include a @TeleOp or @Autonomous annotation.
@@ -64,7 +64,9 @@ To use:
   9. Prior to initialization, position the robot on the field by left-mouse-clicking the field (for robot position),
      and right-mouse-clicking (for robot orientation). This must be done with 3D camera in overhead view (center button).
   10. Use the INIT/START/STOP button as you would on the FTC Driver Station.
-  11. Use the Camera buttons on the left to change the position of the 3D camera.
+  11. Use the Camera buttons on the left to change the position of the 3D camera. Also once you've selected any
+      camera position other than the overhead view, you can use mouse-drag to reposition camera: Left-drag to
+      move camera around field, Alt-Left-drag to zoom in/out, and Right-drag to pan side to side or up-down.
   12. If desired use the sliders to introduce random and systematic motor error, and inertia.
 
 
@@ -81,26 +83,7 @@ CHANGES 1/7/2020
 
 CHANGES 12/31/2019
     Modified the original Virtual Robot application to use JavaFX 3D graphics. It is possible to create new robot
-    configurations, but for the 3D version this is done completely in Java code.
-
-CHANGES 12/16/2019
-    Further changes to facilitate creation of new robot configurations. The robot configuration classes (e.g., 
-    MechanumBot) still extend VirtualBot. But now, these classes are also the JavaFX Controller classes for 
-    the fxml markup files that define the robot's graphical representation in the UI. The robot configuration class 
-    must have a @BotConfig annotation that indicates the name of this config (as it will be displayed to the user)
-    and the filename of its corresponding fxml file. The fxml file must have a Group object as its root, and must
-    set the fx:controller attribute of that group to the name of the robot config class. Individual nodes
-    in the group can be given fx:id attributes, which make them accessible in the robot config class by using
-    a @FXML annotation. The easiest way to create a new configuration is to copy, then modify, the ".java" and ".fxml"
-    files from an existing configuration (for example, MechanumBot.java and mechanum_bot.fxml). See extensive comments
-    in the virtual_robot.controller.VirtualBot and virtual_robot.controller.robots.ArmBot classes and the
-    virtual_robot.controller.robots.fxml.arm_bot.fxml file for more explanation.
-
-CHANGES 12/12/2019
-    Changes made to all more versatile building of new robot configurations. A transparent robot base layer (equal in
-    width to the field) was added. This makes it possible for the robot to have accessories that extend well beyond
-    the chassis in all four directions. A new robot configuration, ArmBot, was added. It has an extensible arm with a
-    grabber at the end. The arm is DC Motor-operated. The grabber is Servo-operated. It is a mecanum-wheeled bot.
+    configurations, but for the 3D version this is done completely in Java code.s a mecanum-wheeled bot.
 
 CHANGES 11/29/2019
     Range class and additional op modes contributed by FTC Team 16072. Servo interface (and ServoImpl class)
@@ -115,12 +98,6 @@ CHANGES 10/6/2019
 CHANGES 8/17/2019
     RUN_TO_POSITION mode is now available for DcMotor, with setTargetPosition, getTargetPosition, and isBusy methods.
     Added 175 ms of latency to the BNO055IMU.
-
-CHANGES 8/4/2019
-    To better approximate real robot behavior, latency of 175ms added to the standard gyro sensor (used only on the
-    Two-Wheel Bot). That is, updated values are available only every 175ms. The amount of latency can be changed
-    easily in the createHardwareMap method of the virtual_robot.controller.robots.TwoWheelBot class. Will probably make a
-    similar change to the BNO055IMU soon.
 
 CHANGES 7/10/2019
     To improve plug and play with OpModes copied and pasted from Android Studio, multiple packages were renamed. In
@@ -145,19 +122,4 @@ CHANGES 7/01/2019
 
 CHANGES 6/25/2019
     Contribution from Alan Smith (alan412): now supports "regular" op modes in addition to linear op modes.
-
-CHANGES 4/3/2019
-    1. Added BNO055IMU interface to simulate (in a limited way) coding for the IMU in the REV Expansion Hub.
-    2. The Mecanum Bot and X Drive Bot now have a BNO055IMU rather than the original gyro.
-    3. The Two-Wheel Bot still has the original gyro.
-    4. DCMotor interface renamed to DcMotor, in keeping the the FTC SDK.
-    5. New utility classes: enum AngleUnit, enum AxesOrder, enum AxesReference, class Orientation
-
-CHANGES 3/23/2019
-    1. Uses real game pad (instead of the original "virtual" game pad.
-    2. Added an X-Drive robot configuration.
-    3. Tweaks to opModeIsActive() and addition of isStopRequested() to allow while() loop before START.
-    4. Added Color class with single static method: RGBtoHSV(red, green, blue, hsv).
-    5. Added distance sensors to all robot configurations to measure distance from walls.
-    6. Replaced LineFollow example opMode with MechBotAutoDemo, a line follower that actually works.
 

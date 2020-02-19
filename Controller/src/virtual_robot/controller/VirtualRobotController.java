@@ -1014,7 +1014,7 @@ public class VirtualRobotController {
                 contact.surface.bounce_vel = 2.0;
                 contact.surface.mu = 0.5;
                 contact.surface.soft_cfm = 0;
-                contact.surface.soft_erp = 0.1;
+                contact.surface.soft_erp = 0.4;
                 DJoint c = OdeHelper.createContactJoint (world,contactGroup,contact);
                 c.attach (contact.geom.g1.getBody(), contact.geom.g2.getBody());
             }
