@@ -304,8 +304,8 @@ public class BetaBot extends VirtualBot {
         verticalLiftSpeed =  1000.0 * (liftElevation - oldLiftElevation) / millis;
         sliderSpeed = 1000.0 * (sliderTranslation - oldSliderTranslation) / millis;
 
-        rightIntakeSpeed = 1000.0 * rightIntakeMotor.update(millis) * 30.0/(1120.0 * millis);
-        leftIntakeSpeed = 1000.0* leftIntakeMotor.update(millis) * 30.0 / (1120.0 *  millis);
+        rightIntakeSpeed = 1000.0 * rightIntakeMotor.update(millis) * 50.0/(1120.0 * millis);
+        leftIntakeSpeed = 1000.0* leftIntakeMotor.update(millis) * 50.0 / (1120.0 *  millis);
 
 //        System.out.println("Right intake speed: " + rightIntakeSpeed);
 //        System.out.println("Left intake speed: " + leftIntakeSpeed);
@@ -843,23 +843,23 @@ public class BetaBot extends VirtualBot {
 
         for (int i = 0; i<3; i++){
             CylWithDGeom leftIntakeWheel = new CylWithDGeom(2.5, 5, fxBody,
-                    "Left Intake Wheel" + i,OdeHelper.createCylinder(botSpace, 2.5, 5));
+                    "Left Intake Wheel" + i, OdeHelper.createCylinder(botSpace, 2.5, 5));
             leftIntakeWheel.setMaterial(intakeMaterial);
-            leftIntakeWheel.getTransforms().addAll(new Translate(-7.5, (1-i)*7.0, 0), new Rotate(90, Rotate.X_AXIS));
+            leftIntakeWheel.getTransforms().addAll(new Translate(-7.5, (1-i)*6.5, 0), new Rotate(90, Rotate.X_AXIS));
             leftIntakeGroup.getChildren().add(leftIntakeWheel);
             CylWithDGeom rightIntakeWheel = new CylWithDGeom(2.5, 5, fxBody,
-                    "Right Intake Wheel" + i,OdeHelper.createCylinder(botSpace, 2.5, 5));
+                    "Right Intake Wheel" + i, OdeHelper.createCylinder(botSpace, 2.5, 5));
             rightIntakeWheel.setMaterial(intakeMaterial);
-            rightIntakeWheel.getTransforms().addAll(new Translate(7.5, (1-i)*7.0, 0), new Rotate(90, Rotate.X_AXIS));
+            rightIntakeWheel.getTransforms().addAll(new Translate(7.5, (1-i)*6.5, 0), new Rotate(90, Rotate.X_AXIS));
             rightIntakeGroup.getChildren().add(rightIntakeWheel);
         }
 
-        BoxWithDGeom intakeRoof = new BoxWithDGeom(20, 21, 3, fxBody, "intakeRoof");
+        BoxWithDGeom intakeRoof = new BoxWithDGeom(20, 19, 3, fxBody, "intakeRoof");
         intakeRoof.setMaterial(new PhongMaterial(Color.color(0.1, 0, 0, 0)));
         intakeRoof.getTransforms().add(new Translate(0, 0, 8 ));
 
         intakeGroup.getChildren().addAll(leftIntakeGroup, rightIntakeGroup, intakeRoof);
-        intakeGroup.getTransforms().add(new Translate(0, -12, pltZOffset));
+        intakeGroup.getTransforms().add(new Translate(0, -12.5, pltZOffset));
 
         intakeGroup.updateGeomOffsets();
 
