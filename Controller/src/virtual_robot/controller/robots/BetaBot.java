@@ -304,8 +304,8 @@ public class BetaBot extends VirtualBot {
         verticalLiftSpeed =  1000.0 * (liftElevation - oldLiftElevation) / millis;
         sliderSpeed = 1000.0 * (sliderTranslation - oldSliderTranslation) / millis;
 
-        rightIntakeSpeed = 1000.0 * rightIntakeMotor.update(millis) * 15.0/(1120.0 * millis);
-        leftIntakeSpeed = 1000.0* leftIntakeMotor.update(millis) * 15.0 / (1120.0 *  millis);
+        rightIntakeSpeed = 1000.0 * rightIntakeMotor.update(millis) * 30.0/(1120.0 * millis);
+        leftIntakeSpeed = 1000.0* leftIntakeMotor.update(millis) * 30.0 / (1120.0 *  millis);
 
 //        System.out.println("Right intake speed: " + rightIntakeSpeed);
 //        System.out.println("Left intake speed: " + leftIntakeSpeed);
@@ -918,26 +918,49 @@ public class BetaBot extends VirtualBot {
                 o1IntakeRoof = (o1CBits & CBits.BOT_INTAKE_ROOF) != 0,
                 o2IntakeRoof = (o2CBits & CBits.BOT_INTAKE_ROOF) != 0;
 
+        DMatrix3 botRot;
+        DVector3 handNorm = new DVector3();
+
+        if (numContacts > 0 && ( o1RH && o2Block || o2RH && o1Block || o1LH && o2Block || o2LH && o1Block)) {
+//            System.out.println();
+//            System.out.println("o1: " + (o1LH ? "Left Hand" : o1RH ? "Right Hand" : "Block") + "   o2: " + (o2LH ? "Left Hand" : o2RH ? "Right Hand" : "Block"));
+            botRot = (DMatrix3)fxBody.getRotation();
+            handNorm = new DVector3();
+            DMatrix.dMultiply0(handNorm, botRot, o1RH || o2RH? new DVector3(-1, 0, 0) : new DVector3(1, 0, 0));
+//            System.out.println("Hand Normal: " + handNorm);
+        }
+
+
         final double fudgeVerticalLiftSpeed = 0.1;
 
         for (int i=0; i<numContacts; i++)
         {
             DContact contact = contacts.get(i);
             if ( o1RH && o2Block || o2RH && o1Block || o1LH && o2Block || o2LH && o1Block){
-                contact.fdir1.set(0, 0, 1);
-                contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactFDir1 | dContactMotion1 | dContactApprox1_1
-                        | dContactApprox1_2 | dContactApprox1_N | dContactRolling | dContactMotion2 | dContactMu2;
-                contact.surface.mu = 10;
-                contact.surface.mu2 = 10;
-                contact.surface.rhoN = 10;
-                contact.surface.soft_cfm = 0.0001;
-                contact.surface.soft_erp = 0.4;
-                if (o1Block) {
-                    contact.surface.motion1 = verticalLiftSpeed + fudgeVerticalLiftSpeed;
-                    contact.surface.motion2 = o2LH? -sliderSpeed : sliderSpeed;
+                double dot = handNorm.dot(contact.geom.normal);
+//                System.out.println("N: " + i + "  Contact Normal: " + contact.geom.normal + "  Dot: " + dot);
+
+                if (o1Block && dot > 0.8 || o2Block && dot < -0.8) {
+                    contact.fdir1.set(0, 0, 1);
+                    contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactFDir1 | dContactMotion1 | dContactApprox1_1
+                            | dContactApprox1_2 | dContactApprox1_N | dContactRolling | dContactMotion2 | dContactMu2;
+                    contact.surface.mu = 6;
+                    contact.surface.mu2 = 6;
+                    contact.surface.rhoN = 6;
+                    contact.surface.soft_cfm = 0.0001;
+                    contact.surface.soft_erp = 0.4;
+                    if (o1Block) {
+                        contact.surface.motion1 = verticalLiftSpeed + fudgeVerticalLiftSpeed;
+                        contact.surface.motion2 = o2LH ? -sliderSpeed : sliderSpeed;
+                    } else {
+                        contact.surface.motion1 = -verticalLiftSpeed + fudgeVerticalLiftSpeed;
+                        contact.surface.motion2 = o1LH ? sliderSpeed : -sliderSpeed;
+                    }
                 } else {
-                    contact.surface.motion1 = -verticalLiftSpeed + fudgeVerticalLiftSpeed;
-                    contact.surface.motion2 = o1LH? sliderSpeed : -sliderSpeed;
+                    contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1;
+                    contact.surface.mu = 0;
+                    contact.surface.soft_cfm = 0.00000001;
+                    contact.surface.soft_erp = 0.2;
                 }
 
 
@@ -948,8 +971,8 @@ public class BetaBot extends VirtualBot {
                 contact.surface.mu = 0;
                 contact.surface.mu2 = 5;
                 contact.surface.rhoN = 0;
-                contact.surface.soft_cfm = 0.0001;
-                contact.surface.soft_erp = 0.4;
+                contact.surface.soft_cfm = 0.00001;
+                contact.surface.soft_erp = 0.2;
                 if (o1Block) {
                     contact.surface.motion2 = o2LtIntake? -leftIntakeSpeed : -rightIntakeSpeed;
                 } else {
