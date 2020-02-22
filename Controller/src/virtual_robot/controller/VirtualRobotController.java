@@ -16,21 +16,12 @@ import javafx.scene.input.MouseDragEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Box;
-import javafx.scene.shape.MeshView;
-import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.util.Callback;
-import odefx.CBits;
-import odefx.FxBody;
-import odefx.FxBodyHelper;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.ode4j.ode.*;
 import org.reflections.Reflections;
-import util3d.Parts;
-import util3d.Util3D;
 import virtual_robot.config.Config;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -142,9 +133,13 @@ public class VirtualRobotController {
     private volatile boolean opModeStarted = false;
     private Thread opModeThread = null;
 
-    //Virtual Robot Control Engine
-    ScheduledExecutorService executorService = null;
-    public static final double TIMER_INTERVAL_MILLISECONDS = 33;
+    //Display Engine
+    ScheduledExecutorService displayExecutorService = null;
+    public static final long DISPLAY_TIMER_INTERVAL_MILLISECONDS = 33;
+
+    //Physics Engine
+    ScheduledExecutorService physicsExecutorService = null;
+    public static final long PHYSICS_TIMER_INTERVAL_MILLISECONDS = 10;
 
     //Telemetry
     private volatile String telemetryText;
@@ -387,10 +382,16 @@ public class VirtualRobotController {
             opModeThread = new Thread(runOpMode);
             opModeThread.setDaemon(true);
 
-            Runnable singleCycle = new Runnable() {
+            Runnable physicsCycle = new Runnable() {
                 @Override
                 public void run() {
                     singlePhysicsCycle();
+                }
+            };
+
+            Runnable displayCycle = new Runnable() {
+                @Override
+                public void run() {
                     Platform.runLater(new Runnable() {
                         @Override
                         public void run() {
@@ -399,8 +400,10 @@ public class VirtualRobotController {
                     });
                 }
             };
-            executorService = Executors.newSingleThreadScheduledExecutor();
-            executorService.scheduleAtFixedRate(singleCycle, 0, 33, TimeUnit.MILLISECONDS);
+            displayExecutorService = Executors.newSingleThreadScheduledExecutor();
+            displayExecutorService.scheduleAtFixedRate(displayCycle, 0, DISPLAY_TIMER_INTERVAL_MILLISECONDS, TimeUnit.MILLISECONDS);
+            physicsExecutorService = Executors.newSingleThreadScheduledExecutor();
+            physicsExecutorService.scheduleAtFixedRate(physicsCycle, 0, PHYSICS_TIMER_INTERVAL_MILLISECONDS, TimeUnit.MILLISECONDS);
             opModeThread.start();
         }
         else if (!opModeStarted){
@@ -411,8 +414,8 @@ public class VirtualRobotController {
             driverButton.setText("INIT");
             opModeInitialized = false;
             opModeStarted = false;
-            //if (opModeThread.isAlive() && !opModeThread.isInterrupted()) opModeThread.interrupt();
-            if (!executorService.isShutdown()) executorService.shutdown();
+            if (!displayExecutorService.isShutdown()) displayExecutorService.shutdown();
+            if (!physicsExecutorService.isShutdown()) physicsExecutorService.shutdown();
             try{
                 opModeThread.join(500);
             } catch(InterruptedException exc) {
@@ -433,6 +436,9 @@ public class VirtualRobotController {
     }
 
     private synchronized void singlePhysicsCycle(){
+
+//        System.out.println();
+//        System.out.println("SINGLE PHYSICS CYCLE");
         /**
          * Update bot sensors
          */
@@ -441,7 +447,7 @@ public class VirtualRobotController {
         /**
          * Update forces and speeds of bot motor joints based on states of motors, bot position, etc.
          */
-        bot.updateState(TIMER_INTERVAL_MILLISECONDS);
+        bot.updateState(PHYSICS_TIMER_INTERVAL_MILLISECONDS);
 
         /**
          * Check for collisions between geoms in space. The nearCallback will assign contact joints
@@ -452,7 +458,7 @@ public class VirtualRobotController {
         /**
          * Do a physics simulation step (i.e., an integration step)
          */
-        world.quickStep(TIMER_INTERVAL_MILLISECONDS/1000.0);
+        world.quickStep(PHYSICS_TIMER_INTERVAL_MILLISECONDS /1000.0);
 
         /**
          * Empty the contractGroup. This contains the contact joints that were created during the previous
@@ -514,7 +520,8 @@ public class VirtualRobotController {
         }
 
         bot.powerDownAndReset();
-        if (!executorService.isShutdown()) executorService.shutdown();
+        if (!displayExecutorService.isShutdown()) displayExecutorService.shutdown();
+        if (!physicsExecutorService.isShutdown()) physicsExecutorService.shutdown();
         opModeInitialized = false;
         opModeStarted = false;
         Platform.runLater(new Runnable() {
@@ -954,15 +961,16 @@ public class VirtualRobotController {
         //Set up world
         OdeHelper.initODE2(0);
         world = OdeHelper.createWorld();
-        space = OdeHelper.createHashSpace(null);
+        space = OdeHelper.createSimpleSpace(null);
+//        ((DHashSpace)space).setLevels(-2, 9);
         contactGroup = OdeHelper.createJointGroup();
         world.setGravity(0, 0, -980);
-        world.setQuickStepNumIterations(12);
+        world.setQuickStepNumIterations(10);
         world.setERP(0.8);
         world.setContactSurfaceLayer(0);
         System.out.println("Original damping: " + world.getLinearDamping() + "  " + world.getAngularDamping());
-        world.setLinearDamping(0.01);
-        world.setAngularDamping(0.1);
+        world.setLinearDamping(0.001);
+        world.setAngularDamping(0.01);
     }
 
     void shutDownODE(){
@@ -987,11 +995,17 @@ public class VirtualRobotController {
             /**
              * If either geom is a botSpace, recursively test the bodies within the spaces for collision
              */
+
+//            System.out.println();
+//            String data1 = o1.getData() != null? o1.getData().toString() : "Unknown";
+//            String data2 = o2.getData() != null? o2.getData().toString() : "Unknown";
+//            System.out.println("o1: " + data1 + "   o2: " + data2);
+
             OdeHelper.spaceCollide2(o1,o2,data,nearCallback);
             return;
         }
 
-        /** If neither geom is a botSpace, then test the two geoms against eachother for contact points
+        /** If neither geom is a Space, then test the two geoms against eachother for contact points
          *  Then, for each detected contact, create a contact joint that has the desired properties
          *  (e.g., bounciness and friction coefficient), and attach this joint to the two bodies. This
          *  will apply forces to the bodies during the next ODE integration step.

@@ -123,7 +123,8 @@ public class SkyStoneField extends FtcField {
             }
             if (i>5) testBlockBox.getTransforms().add(new Rotate(180, Rotate.Z_AXIS));
             subSceneGroup.getChildren().add(testBlockBox);
-            stones[i].setNode(testBlockBox, true);
+            stones[i].setNode(testBlockBox, false);
+            stones[i].addGeom(OdeHelper.createBox(10, 20, 10));
             stones[i].setPosition(i<6? -HALF_FIELD_WIDTH+125 : HALF_FIELD_WIDTH-125, -HALF_FIELD_WIDTH + 10 + (i%6)*22, 5);
             stones[i].setCategoryBits(CBits.STONES);
             stones[i].setCollideBits(0xFF);
