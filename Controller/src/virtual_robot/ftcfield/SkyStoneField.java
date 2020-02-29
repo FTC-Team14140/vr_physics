@@ -156,6 +156,8 @@ public class SkyStoneField extends FtcField {
         foundationRed.setCategoryBits(CBits.FOUNDATIONS);
         foundationBlue.setCollideBits(0xFF);
         foundationRed.setCollideBits(0xFF);
+        foundationBlue.setDamping(0.05, 0.05);
+        foundationRed.setDamping(0.05, 0.05);
     }
 
     @Override

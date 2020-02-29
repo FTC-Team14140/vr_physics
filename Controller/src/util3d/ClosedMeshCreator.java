@@ -141,18 +141,18 @@ public abstract class ClosedMeshCreator {
                 faces[nF+9] = (q+1)==2*(Ni+Nj)? endTexIndex+1 : p3;
                 faces[nF+10] = faces[nF+11] = p4;
 
-                System.out.println();
-                System.out.println("SIDE TEX COORDS");
-                System.out.printf("k=%d  q=%d  Indices: %d %d %d Coords: (%.2f, %.2f), (%.2f, %.2f), (%.2f, %.2f)\n", k, q,
-                        faces[nF+1], faces[nF+3], faces[nF+5],
-                        texCoords[2*faces[nF+1]], texCoords[2*faces[nF+1]+1],
-                        texCoords[2*faces[nF+3]], texCoords[2*faces[nF+3]+1],
-                        texCoords[2*faces[nF+5]], texCoords[2*faces[nF+5]+1]);
-                System.out.printf("k=%d  q=%d  Indices: %d %d %d Coords: (%.2f, %.2f), (%.2f, %.2f), (%.2f, %.2f)\n", k, q,
-                        faces[nF+7], faces[nF+9], faces[nF+11],
-                        texCoords[2*faces[nF+7]], texCoords[2*faces[nF+1]+7],
-                        texCoords[2*faces[nF+9]], texCoords[2*faces[nF+9]+1],
-                        texCoords[2*faces[nF+11]], texCoords[2*faces[nF+11]+1]);
+//                System.out.println();
+//                System.out.println("SIDE TEX COORDS");
+//                System.out.printf("k=%d  q=%d  Indices: %d %d %d Coords: (%.2f, %.2f), (%.2f, %.2f), (%.2f, %.2f)\n", k, q,
+//                        faces[nF+1], faces[nF+3], faces[nF+5],
+//                        texCoords[2*faces[nF+1]], texCoords[2*faces[nF+1]+1],
+//                        texCoords[2*faces[nF+3]], texCoords[2*faces[nF+3]+1],
+//                        texCoords[2*faces[nF+5]], texCoords[2*faces[nF+5]+1]);
+//                System.out.printf("k=%d  q=%d  Indices: %d %d %d Coords: (%.2f, %.2f), (%.2f, %.2f), (%.2f, %.2f)\n", k, q,
+//                        faces[nF+7], faces[nF+9], faces[nF+11],
+//                        texCoords[2*faces[nF+7]], texCoords[2*faces[nF+1]+7],
+//                        texCoords[2*faces[nF+9]], texCoords[2*faces[nF+9]+1],
+//                        texCoords[2*faces[nF+11]], texCoords[2*faces[nF+11]+1]);
             }
         }
 
@@ -171,20 +171,20 @@ public abstract class ClosedMeshCreator {
             }
         }
 
-        System.out.println("FACETS:");
-        int numFacets = 4 * (Ni*Nj) + 4*Nk*(Ni+Nj);
-        for (int n = 0; n < numFacets; n++) {
-            int nf = 6*n;
-            int np0 = 3*faces[nf];
-            int np1 = 3*faces[nf+2];
-            int np2 = 3*faces[nf+4];
-            System.out.printf("%d: Indices: %d %d %d  Points: (%.0f, %.0f, %.0f), (%.0f, %.0f, %.0f), (%.0f, %.0f, %.0f)\n", n,
-                   np0, np1, np2,
-                   points[np0], points[np0+1], points[np0+2],
-                    points[np1], points[np1+1], points[np1+2],
-                    points[np2], points[np2+1], points[np2+2]);
-        }
-        System.out.println();
+//        System.out.println("FACETS:");
+//        int numFacets = 4 * (Ni*Nj) + 4*Nk*(Ni+Nj);
+//        for (int n = 0; n < numFacets; n++) {
+//            int nf = 6*n;
+//            int np0 = 3*faces[nf];
+//            int np1 = 3*faces[nf+2];
+//            int np2 = 3*faces[nf+4];
+//            System.out.printf("%d: Indices: %d %d %d  Points: (%.0f, %.0f, %.0f), (%.0f, %.0f, %.0f), (%.0f, %.0f, %.0f)\n", n,
+//                   np0, np1, np2,
+//                   points[np0], points[np0+1], points[np0+2],
+//                    points[np1], points[np1+1], points[np1+2],
+//                    points[np2], points[np2+1], points[np2+2]);
+//        }
+//        System.out.println();
 
     }
 

@@ -962,6 +962,7 @@ public class VirtualRobotController {
         OdeHelper.initODE2(0);
         world = OdeHelper.createWorld();
         space = OdeHelper.createSimpleSpace(null);
+//        space = OdeHelper.createHashSpace();
 //        ((DHashSpace)space).setLevels(-2, 9);
         contactGroup = OdeHelper.createJointGroup();
         world.setGravity(0, 0, -980);
