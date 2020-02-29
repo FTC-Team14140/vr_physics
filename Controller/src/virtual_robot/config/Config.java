@@ -20,5 +20,5 @@ public class Config {
     /**
      * The image object for the field.
      */
-    public static final Image BACKGROUND = new Image("/virtual_robot/assets/skystone_field648.bmp");
+    public static final Image BACKGROUND = new Image("/virtual_robot/assets/blank_skystone_field.bmp");
 }

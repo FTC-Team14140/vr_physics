@@ -72,6 +72,9 @@ To use:
 
 LOG OF CHANGES
 
+CHANGES 2/28/2020
+    Added Foundations to the SkyStone field.
+
 CHANGES 2/16/2020
     Modified to use the Ode4J (a Java port of the ODE physics engine) for physics-based simulation, including
     intake and manipulation of stones by the robot.

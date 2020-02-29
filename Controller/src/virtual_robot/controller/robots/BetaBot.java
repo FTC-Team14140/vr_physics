@@ -854,9 +854,9 @@ public class BetaBot extends VirtualBot {
             rightIntakeGroup.getChildren().add(rightIntakeWheel);
         }
 
-        BoxWithDGeom intakeRoof = new BoxWithDGeom(20, 19, 3, fxBody, "intakeRoof");
+        BoxWithDGeom intakeRoof = new BoxWithDGeom(20, 18, 3, fxBody, "intakeRoof");
         intakeRoof.setMaterial(new PhongMaterial(Color.color(0.1, 0, 0, 0)));
-        intakeRoof.getTransforms().add(new Translate(0, 0, 8 ));
+        intakeRoof.getTransforms().add(new Translate(0, -0.5, 8 ));
 
         intakeGroup.getChildren().addAll(leftIntakeGroup, rightIntakeGroup, intakeRoof);
         intakeGroup.getTransforms().add(new Translate(0, -12.5, pltZOffset));
@@ -868,7 +868,7 @@ public class BetaBot extends VirtualBot {
         zBase = 5.08;
 
         fxBody.setCategoryBits(CBits.BOT);
-        fxBody.setCollideBits(0xFFF);
+        fxBody.setCollideBits(0xFF);
         botBottomMesh.setCategoryBits(CBits.BOT_BOTTOM);
         botBottomMesh.setCollideBits(CBits.FLOOR);
         leftHand.getDGeom().setCategoryBits(CBits.BOT_HANDS | CBits.BOT_LEFT_HAND);
@@ -915,8 +915,8 @@ public class BetaBot extends VirtualBot {
                 o2RtIntake = (o2CBits & CBits.BOT_RIGHT_INTAKE) != 0,
                 o1LtIntake = (o1CBits & CBits.BOT_LEFT_INTAKE) != 0,
                 o2LtIntake = (o2CBits & CBits.BOT_LEFT_INTAKE) != 0,
-                o1IntakeRoof = (o1CBits & CBits.BOT_INTAKE_ROOF) != 0,
-                o2IntakeRoof = (o2CBits & CBits.BOT_INTAKE_ROOF) != 0;
+                o1BotBottom = (o1CBits & CBits.BOT_BOTTOM) != 0,
+                o2BotBottom = (o2CBits & CBits.BOT_BOTTOM) != 0;
 
         DMatrix3 botRot;
         DVector3 handNorm = new DVector3();
@@ -980,9 +980,16 @@ public class BetaBot extends VirtualBot {
                 }
 
 
-            }  else {
+            }  else if (o1BotBottom || o2BotBottom){
                 contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactBounce;
                 contact.surface.mu = 0;
+                contact.surface.soft_cfm = 0.00000001;
+                contact.surface.soft_erp = 0.2;
+                contact.surface.bounce = 0.3;
+                contact.surface.bounce_vel = 10;
+            } else {
+                contact.surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactBounce;
+                contact.surface.mu = 0.5;
                 contact.surface.soft_cfm = 0.00000001;
                 contact.surface.soft_erp = 0.2;
                 contact.surface.bounce = 0.3;

@@ -6,6 +6,7 @@ import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
+import javafx.scene.shape.Mesh;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
@@ -15,6 +16,7 @@ import odefx.FxBody;
 import odefx.FxBodyHelper;
 import org.ode4j.math.DMatrix3;
 import org.ode4j.ode.*;
+import util3d.ClosedMeshCreator;
 import util3d.Parts;
 import util3d.Util3D;
 import virtual_robot.config.Config;
@@ -26,7 +28,8 @@ public class SkyStoneField extends FtcField {
     private final Image backgroundImage = Config.BACKGROUND;
 
     FxBody[] stones = new FxBody[12];
-    FxBody[] foundations = new FxBody[2];
+    FxBody foundationBlue;
+    FxBody foundationRed;
 
     public SkyStoneField(Group group, DWorld world, DSpace space){
         super(group, world, space);
@@ -130,7 +133,29 @@ public class SkyStoneField extends FtcField {
             stones[i].setCollideBits(0xFF);
         }
 
-
+        DMass foundationMass = OdeHelper.createMass();
+        foundationMass.setBox(1, 46, 88, 6);
+        foundationMass.setMass(2000);
+        FoundationMeshCreator foundationMeshCreator = new FoundationMeshCreator();
+        Mesh foundationMesh1 = foundationMeshCreator.newMeshInstance();
+        MeshView foundationMeshView1 = new MeshView(foundationMesh1);
+        foundationMeshView1.setMaterial(Util3D.imageMaterial("/virtual_robot/assets/blueFoundation.jpg"));
+        Mesh foundationMesh2 = foundationMeshCreator.newMeshInstance();
+        MeshView foundationMeshView2 = new MeshView(foundationMesh2);
+        foundationMeshView2.setMaterial(Util3D.imageMaterial("/virtual_robot/assets/redFoundation.jpg"));
+        subSceneGroup.getChildren().addAll(foundationMeshView1, foundationMeshView2);
+        foundationBlue = FxBody.newInstance(world, space);
+        foundationRed = FxBody.newInstance(world, space);
+        foundationBlue.setMass(foundationMass);
+        foundationRed.setMass(foundationMass);
+        foundationBlue.setNode(foundationMeshView1, true);
+        foundationRed.setNode(foundationMeshView2, true);
+        foundationBlue.setPosition(-38, HALF_FIELD_WIDTH-54, 3);
+        foundationRed.setPosition(38, HALF_FIELD_WIDTH-54, 3);
+        foundationBlue.setCategoryBits(CBits.FOUNDATIONS);
+        foundationRed.setCategoryBits(CBits.FOUNDATIONS);
+        foundationBlue.setCollideBits(0xFF);
+        foundationRed.setCollideBits(0xFF);
     }
 
     @Override
@@ -141,6 +166,14 @@ public class SkyStoneField extends FtcField {
             DRotation.dRFromAxisAndAngle(rot, 0, 0, 1, 0);
             stones[i].setRotation(rot);
         }
+        foundationBlue.setPosition(-38, HALF_FIELD_WIDTH-54, 3);
+        DMatrix3 rotBlue = new DMatrix3();
+        DRotation.dRFromAxisAndAngle(rotBlue, 0, 0, 1, 0);
+        foundationBlue.setRotation(rotBlue);
+        foundationRed.setPosition(38, HALF_FIELD_WIDTH-54, 3);
+        DMatrix3 rotRed = new DMatrix3();
+        DRotation.dRFromAxisAndAngle(rotRed, 0, 0, 1, 0);
+        foundationRed.setRotation(rotRed);
     }
 
     @Override
@@ -148,6 +181,43 @@ public class SkyStoneField extends FtcField {
         for (int i=0; i<stones.length; i++){
             stones[i].updateNodeDisplay();
         }
+        foundationBlue.updateNodeDisplay();
+        foundationRed.updateNodeDisplay();
+    }
+
+    private class FoundationMeshCreator extends ClosedMeshCreator{
+
+        public FoundationMeshCreator(){
+            super(1, 1, 3);
+        }
+
+        @Override
+        protected float[] createPoints() {
+            return new float[]{
+                    -22, -43, -3,
+                    22, -43, -3,
+                    -22, 43, -3,
+                    22, 43, -3,
+
+                    -23, -44, 3,
+                    23, -44, 3,
+                    23, 44, 3,
+                    -23, 44, 3,
+
+                    -22, -43, 3,
+                    22, -43, 3,
+                    22, 43, 3,
+                    -22, 43, 3,
+
+                    -21, -42, 0,
+                    21, -42, 0,
+                    -21, 42, 0,
+                    21, 42, 0
+
+            };
+        }
+
+
     }
 
 }
