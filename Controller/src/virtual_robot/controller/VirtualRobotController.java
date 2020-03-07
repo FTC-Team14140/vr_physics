@@ -437,8 +437,6 @@ public class VirtualRobotController {
 
     private synchronized void singlePhysicsCycle(){
 
-//        System.out.println();
-//        System.out.println("SINGLE PHYSICS CYCLE");
         /**
          * Update bot sensors
          */
@@ -448,6 +446,11 @@ public class VirtualRobotController {
          * Update forces and speeds of bot motor joints based on states of motors, bot position, etc.
          */
         bot.updateState(PHYSICS_TIMER_INTERVAL_MILLISECONDS);
+
+        /**
+         * Add any needed forces (e.g. damping forces) to game elements
+         */
+        ftcField.preStepProcess();
 
         /**
          * Check for collisions between geoms in space. The nearCallback will assign contact joints
@@ -969,9 +972,14 @@ public class VirtualRobotController {
         world.setQuickStepNumIterations(10);
         world.setERP(0.8);
         world.setContactSurfaceLayer(0);
-        System.out.println("Original damping: " + world.getLinearDamping() + "  " + world.getAngularDamping());
         world.setLinearDamping(0.001);
         world.setAngularDamping(0.01);
+        world.setAutoDisableFlag(true);
+        world.setAutoDisableLinearThreshold(1.0);
+        world.setAutoDisableAngularThreshold(0.01);
+        world.setAutoDisableSteps(10);
+        world.setAutoDisableTime(0);
+        world.setAutoDisableAverageSamplesCount(5);
     }
 
     void shutDownODE(){
@@ -1020,6 +1028,8 @@ public class VirtualRobotController {
 
         if (o1.getSpace() == bot.getBotSpace() || o2.getSpace() == bot.getBotSpace()){
             bot.handleContacts(n, o1, o2, contacts, contactGroup);
+        } else if ((o1.getCategoryBits() & 0xF0) != 0 || (o2.getCategoryBits() & 0xF0) != 0){
+            ftcField.handleContacts(n, o1, o2, contacts, contactGroup);
         } else {
             for (int i=0; i<n; i++)
             {

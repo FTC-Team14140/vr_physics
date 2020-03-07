@@ -64,6 +64,7 @@ public abstract class VirtualBot {
         botSpace = OdeHelper.createSimpleSpace(controller.getSpace());
         botSpace.setData("Bot Space");
         setUpFxBody();
+        fxBody.setAutoDisableFlag(false);
     }
 
     static void setController(VirtualRobotController ctrl){

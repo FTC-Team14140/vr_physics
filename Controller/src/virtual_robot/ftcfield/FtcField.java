@@ -2,8 +2,7 @@ package virtual_robot.ftcfield;
 
 
 import javafx.scene.Group;
-import org.ode4j.ode.DSpace;
-import org.ode4j.ode.DWorld;
+import org.ode4j.ode.*;
 
 public abstract class FtcField {
 
@@ -22,5 +21,9 @@ public abstract class FtcField {
     public abstract void reset();
 
     public abstract void updateDisplay();
+
+    public void preStepProcess(){}
+
+    public abstract void handleContacts(int numContacts, DGeom o1, DGeom o2, DContactBuffer contacts, DJointGroup contactGroup);
 
 }
